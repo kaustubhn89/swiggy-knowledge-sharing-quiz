@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "swiggy-quiz",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--prefix", ".", "vite", "--port", "5173"],
+      "port": 5173
+    }
+  ]
+}

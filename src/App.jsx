@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { ref, onValue, set, update, remove } from 'firebase/database'
 import { db } from './firebase'
 import { questions } from './questions'
@@ -6,16 +7,23 @@ import Landing from './components/Landing'
 import PlayerJoin from './components/PlayerJoin'
 import WaitingRoom from './components/WaitingRoom'
 import QuestionScreen from './components/QuestionScreen'
+import AnswerReveal from './components/AnswerReveal'
 import AnswerLocked from './components/AnswerLocked'
 import Leaderboard from './components/Leaderboard'
 import AdminLogin from './components/AdminLogin'
 import AdminLobby from './components/AdminLobby'
 import AdminControl from './components/AdminControl'
 
-const ADMIN_PASSWORD = 'growisto@swiggy2026'
+const ADMIN_PASSWORD = 'growisto@2026'
 
 function genId() {
   return Math.random().toString(36).slice(2, 11) + Date.now().toString(36)
+}
+
+const pageVariants = {
+  initial: { opacity: 0, y: 18 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] } },
+  exit:    { opacity: 0, y: -18, transition: { duration: 0.2, ease: 'easeIn' } }
 }
 
 export default function App() {
@@ -31,13 +39,19 @@ export default function App() {
   const [players, setPlayers] = useState({})
   const [answerLocked, setAnswerLocked] = useState(false)
   const [lockedAnswer, setLockedAnswer] = useState(null)
+  const [revealData, setRevealData] = useState(null)
+
   const prevQuestion = useRef(-1)
+  const revealTimeoutRef = useRef(null)
+  const playersRef = useRef(players)
+  const userTypeRef = useRef(userType)
+  playersRef.current = players
+  userTypeRef.current = userType
 
   // Firebase listeners
   useEffect(() => {
     const unsubGame = onValue(ref(db, 'game'), snap => {
-      const data = snap.val()
-      setGameState(data || { status: 'waiting', currentQuestion: 0, questionStartTime: 0 })
+      setGameState(snap.val() || { status: 'waiting', currentQuestion: 0, questionStartTime: 0 })
     })
     const unsubPlayers = onValue(ref(db, 'players'), snap => {
       setPlayers(snap.val() || {})
@@ -45,38 +59,54 @@ export default function App() {
     return () => { unsubGame(); unsubPlayers() }
   }, [])
 
-  // Reset answer state when question changes
+  // Detect Play Again reset
   useEffect(() => {
-    if (gameState.currentQuestion !== prevQuestion.current) {
-      prevQuestion.current = gameState.currentQuestion
-      setAnswerLocked(false)
-      setLockedAnswer(null)
-    }
-  }, [gameState.currentQuestion])
-
-  // Detect Play Again reset: if player data gone and game reset to waiting
-  useEffect(() => {
-    if (
-      userType === 'player' &&
-      playerName &&
-      gameState.status === 'waiting' &&
-      Object.keys(players).length === 0
-    ) {
+    if (userType === 'player' && playerName && gameState.status === 'waiting' && Object.keys(players).length === 0) {
       setPlayerName('')
       localStorage.removeItem('sqPlayerName')
     }
   }, [players, gameState.status, userType, playerName])
 
-  // ── Handlers ──────────────────────────────────
+  // Question change → show answer reveal for players
+  useEffect(() => {
+    if (gameState.currentQuestion !== prevQuestion.current) {
+      if (prevQuestion.current >= 0 && userTypeRef.current === 'player') {
+        const prevAns = playersRef.current[playerId]?.answers?.[prevQuestion.current]
+        if (prevAns) {
+          setRevealData({
+            questionIdx: prevQuestion.current,
+            answer: prevAns.answer,
+            score: prevAns.score || 0,
+            speedBonus: prevAns.speedBonus || 0,
+            isCorrect: prevAns.answer === questions[prevQuestion.current].correct
+          })
+          if (revealTimeoutRef.current) clearTimeout(revealTimeoutRef.current)
+          revealTimeoutRef.current = setTimeout(() => {
+            setRevealData(null)
+            revealTimeoutRef.current = null
+          }, 2800)
+        }
+      }
+      prevQuestion.current = gameState.currentQuestion
+      setAnswerLocked(false)
+      setLockedAnswer(null)
+    }
+  }, [gameState.currentQuestion, playerId])
+
+  // Clear reveal when game leaves question state
+  useEffect(() => {
+    if (gameState.status !== 'question') {
+      setRevealData(null)
+      if (revealTimeoutRef.current) { clearTimeout(revealTimeoutRef.current); revealTimeoutRef.current = null }
+    }
+  }, [gameState.status])
+
+  // ── Handlers ──────────────────────────────────────
 
   const handlePlayerJoin = async (name) => {
     setPlayerName(name)
     localStorage.setItem('sqPlayerName', name)
-    await set(ref(db, `players/${playerId}`), {
-      name,
-      totalScore: 0,
-      answers: {}
-    })
+    await set(ref(db, `players/${playerId}`), { name, totalScore: 0, answers: {} })
   }
 
   const handleAnswer = async (answer, timeRemaining) => {
@@ -89,11 +119,8 @@ export default function App() {
     const speedBonus = correct ? Math.round((timeRemaining / q.time) * 500) : 0
     const score = correct ? 1000 + speedBonus : 0
 
-    const existingAnswers = players[playerId]?.answers || {}
-    const newAnswers = {
-      ...existingAnswers,
-      [gameState.currentQuestion]: { answer, timestamp: Date.now(), score, speedBonus }
-    }
+    const existingAnswers = playersRef.current[playerId]?.answers || {}
+    const newAnswers = { ...existingAnswers, [gameState.currentQuestion]: { answer, timestamp: Date.now(), score, speedBonus } }
     const newTotal = Object.values(newAnswers).reduce((s, a) => s + (a.score || 0), 0)
 
     await update(ref(db, `players/${playerId}`), {
@@ -103,11 +130,7 @@ export default function App() {
   }
 
   const handleStartGame = async () => {
-    await set(ref(db, 'game'), {
-      status: 'question',
-      currentQuestion: 0,
-      questionStartTime: Date.now()
-    })
+    await set(ref(db, 'game'), { status: 'question', currentQuestion: 0, questionStartTime: Date.now() })
   }
 
   const handleNextQuestion = async () => {
@@ -128,6 +151,8 @@ export default function App() {
     await set(ref(db, 'game'), { status: 'waiting', currentQuestion: 0, questionStartTime: 0 })
     setAnswerLocked(false)
     setLockedAnswer(null)
+    setRevealData(null)
+    prevQuestion.current = -1
   }
 
   const handleAdminLogin = (pwd) => {
@@ -135,27 +160,33 @@ export default function App() {
     return false
   }
 
-  // ── Render ─────────────────────────────────────
-
-  if (!userType) {
-    return (
-      <Landing
-        onJoinAsPlayer={() => setUserType('player')}
-        onAdminLogin={() => setUserType('admin')}
-      />
-    )
+  // ── Compute screen key for AnimatePresence ─────────
+  const getScreenKey = () => {
+    if (!userType) return 'landing'
+    if (userType === 'admin') {
+      if (!adminAuth) return 'admin-login'
+      if (gameState.status === 'waiting') return 'admin-lobby'
+      if (gameState.status === 'question') return `admin-q-${gameState.currentQuestion}`
+      return 'admin-leaderboard'
+    }
+    if (userType === 'player') {
+      if (!playerName) return 'player-join'
+      if (gameState.status === 'waiting') return 'player-waiting'
+      if (revealData) return `reveal-${revealData.questionIdx}`
+      if (gameState.status === 'question') return `player-q-${gameState.currentQuestion}`
+      return 'leaderboard'
+    }
+    return 'landing'
   }
 
-  // Admin flow
-  if (userType === 'admin') {
-    if (!adminAuth) {
-      return <AdminLogin onLogin={handleAdminLogin} onBack={() => setUserType(null)} />
-    }
-    if (gameState.status === 'waiting') {
-      return <AdminLobby players={players} onStartGame={handleStartGame} />
-    }
-    if (gameState.status === 'question') {
-      return (
+  // ── Render current screen content ──────────────────
+  const renderScreen = () => {
+    if (!userType) return <Landing onJoinAsPlayer={() => setUserType('player')} onAdminLogin={() => setUserType('admin')} />
+
+    if (userType === 'admin') {
+      if (!adminAuth) return <AdminLogin onLogin={handleAdminLogin} onBack={() => setUserType(null)} />
+      if (gameState.status === 'waiting') return <AdminLobby players={players} onStartGame={handleStartGame} />
+      if (gameState.status === 'question') return (
         <AdminControl
           gameState={gameState}
           players={players}
@@ -164,50 +195,43 @@ export default function App() {
           isLastQuestion={gameState.currentQuestion === questions.length - 1}
         />
       )
-    }
-    if (gameState.status === 'leaderboard') {
       return <Leaderboard players={players} isAdmin onPlayAgain={handlePlayAgain} />
     }
-  }
 
-  // Player flow
-  if (userType === 'player') {
-    if (!playerName) {
-      return <PlayerJoin onJoin={handlePlayerJoin} onBack={() => setUserType(null)} />
-    }
+    if (userType === 'player') {
+      if (!playerName) return <PlayerJoin onJoin={handlePlayerJoin} onBack={() => setUserType(null)} />
 
-    if (gameState.status === 'waiting') {
-      return <WaitingRoom playerName={playerName} players={players} />
-    }
+      if (gameState.status === 'waiting') return <WaitingRoom playerName={playerName} players={players} />
 
-    if (gameState.status === 'question') {
-      const existingAnswer = players[playerId]?.answers?.[gameState.currentQuestion]
-      const isLocked = answerLocked || !!existingAnswer
+      if (gameState.status === 'question') {
+        if (revealData) return <AnswerReveal data={revealData} />
 
-      if (isLocked) {
-        const shownAnswer = lockedAnswer || existingAnswer?.answer || null
-        return (
-          <AnswerLocked
-            answer={shownAnswer}
-            currentQuestion={gameState.currentQuestion}
-            showResult={false}
-          />
-        )
+        const existingAnswer = players[playerId]?.answers?.[gameState.currentQuestion]
+        const isLocked = answerLocked || !!existingAnswer
+        if (isLocked) {
+          return <AnswerLocked answer={lockedAnswer || existingAnswer?.answer} currentQuestion={gameState.currentQuestion} />
+        }
+        return <QuestionScreen gameState={gameState} onAnswer={handleAnswer} />
       }
 
-      return (
-        <QuestionScreen
-          gameState={gameState}
-          onAnswer={handleAnswer}
-          answerLocked={false}
-        />
-      )
-    }
-
-    if (gameState.status === 'leaderboard') {
       return <Leaderboard players={players} isAdmin={false} playerId={playerId} />
     }
+
+    return <Landing onJoinAsPlayer={() => setUserType('player')} onAdminLogin={() => setUserType('admin')} />
   }
 
-  return <Landing onJoinAsPlayer={() => setUserType('player')} onAdminLogin={() => setUserType('admin')} />
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={getScreenKey()}
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        style={{ minHeight: '100vh' }}
+      >
+        {renderScreen()}
+      </motion.div>
+    </AnimatePresence>
+  )
 }

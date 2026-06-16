@@ -1,108 +1,211 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { questions } from '../questions'
 
-const OPTION_COLORS = {
-  A: 'var(--teal)',
-  B: 'var(--dark-teal)',
-  C: 'var(--orange)',
-  D: 'var(--purple)'
-}
+const ANS_COLORS = { A: '#367588', B: '#1C4A57', C: '#FC8019', D: '#7B5EA7' }
+const DIFF_COLORS = { Easy: { bg: 'rgba(72,187,120,0.15)', color: '#48BB78' }, Medium: { bg: 'rgba(252,128,25,0.15)', color: '#FC8019' }, Hard: { bg: 'rgba(245,101,101,0.15)', color: '#F56565' } }
 
-function CircularTimer({ totalTime, timeRemaining }) {
-  const radius = 36
-  const circumference = 2 * Math.PI * radius
-  const progress = totalTime > 0 ? timeRemaining / totalTime : 0
-  const dashoffset = circumference * (1 - progress)
+function CircularTimer({ totalTime, questionStartTime }) {
+  const R = 58, CIRC = 2 * Math.PI * R
+  const [progress, setProgress] = useState(1)
+  const [displaySecs, setDisplaySecs] = useState(totalTime)
+  const rafRef = useRef()
 
-  let color = 'var(--teal)'
-  if (progress < 0.5) color = 'var(--orange)'
-  if (progress < 0.25) color = '#ef4444'
+  useEffect(() => {
+    const update = () => {
+      const elapsed = (Date.now() - questionStartTime) / 1000
+      const remaining = Math.max(0, totalTime - elapsed)
+      const p = remaining / totalTime
+      setProgress(p)
+      setDisplaySecs(Math.ceil(remaining))
+      rafRef.current = requestAnimationFrame(update)
+    }
+    rafRef.current = requestAnimationFrame(update)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [totalTime, questionStartTime])
+
+  const color = progress > 0.5 ? '#367588' : progress > 0.25 ? '#FC8019' : '#F56565'
+  const dashoffset = CIRC * (1 - progress)
+  const glowSize = Math.round((1 - progress) * 24)
 
   return (
-    <div className="timer-wrap">
-      <svg viewBox="0 0 100 100" width="88" height="88">
-        <circle cx="50" cy="50" r={radius} fill="none" stroke="var(--powder-blue)" strokeWidth="10" />
+    <div style={{ position: 'relative', width: 140, height: 140, flexShrink: 0 }}>
+      <div style={{
+        position: 'absolute', inset: -6, borderRadius: '50%',
+        boxShadow: `0 0 ${glowSize}px ${color}60`,
+        transition: 'box-shadow 0.5s ease'
+      }} />
+      <svg width="140" height="140" viewBox="0 0 140 140">
+        <circle cx="70" cy="70" r={R} fill="#14141F" />
+        <circle cx="70" cy="70" r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="8" />
         <circle
-          cx="50" cy="50" r={radius}
+          cx="70" cy="70" r={R}
           fill="none"
           stroke={color}
-          strokeWidth="10"
-          strokeDasharray={circumference}
-          strokeDashoffset={dashoffset}
+          strokeWidth="8"
           strokeLinecap="round"
-          transform="rotate(-90 50 50)"
-          style={{ transition: 'stroke-dashoffset 0.25s linear, stroke 0.3s' }}
+          strokeDasharray={CIRC}
+          strokeDashoffset={dashoffset}
+          transform="rotate(-90 70 70)"
+          style={{ transition: 'stroke-dashoffset 0.05s linear, stroke 0.4s ease', filter: `drop-shadow(0 0 4px ${color})` }}
         />
-        <text x="50" y="57" textAnchor="middle" fontSize="26" fontWeight="800" fill={color} fontFamily="Inter, sans-serif">
-          {Math.ceil(Math.max(0, timeRemaining))}
-        </text>
       </svg>
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+      }}>
+        <span style={{ fontSize: 36, fontWeight: 900, color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+          {displaySecs}
+        </span>
+        <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', fontWeight: 600, letterSpacing: '0.06em', marginTop: 2 }}>SEC</span>
+      </div>
     </div>
   )
 }
 
-export default function QuestionScreen({ gameState, onAnswer, answerLocked }) {
+export default function QuestionScreen({ gameState, onAnswer }) {
   const q = questions[gameState.currentQuestion]
-  const totalTimeMs = q.time * 1000
-  const [timeRemaining, setTimeRemaining] = useState(totalTimeMs / 1000)
   const [selected, setSelected] = useState(null)
   const lockedRef = useRef(false)
 
   useEffect(() => {
     lockedRef.current = false
     setSelected(null)
+  }, [gameState.currentQuestion])
 
-    const tick = () => {
-      const elapsed = Date.now() - gameState.questionStartTime
-      const remaining = Math.max(0, (totalTimeMs - elapsed) / 1000)
-      setTimeRemaining(remaining)
-    }
-
-    tick()
-    const interval = setInterval(tick, 100)
-    return () => clearInterval(interval)
-  }, [gameState.currentQuestion, gameState.questionStartTime, totalTimeMs])
-
-  const handleSelect = (letter) => {
-    if (selected || answerLocked || lockedRef.current) return
+  const handleSelect = useCallback((letter) => {
+    if (selected || lockedRef.current) return
     lockedRef.current = true
     setSelected(letter)
-    onAnswer(letter, timeRemaining)
-  }
+    const elapsed = (Date.now() - gameState.questionStartTime) / 1000
+    const remaining = Math.max(0, q.time - elapsed)
+    onAnswer(letter, remaining)
+  }, [selected, gameState.questionStartTime, q.time, onAnswer])
+
+  const diff = DIFF_COLORS[q.difficulty] || DIFF_COLORS.Easy
 
   return (
-    <div className="screen" style={{ background: 'var(--off-white)', padding: '16px' }}>
-      <div className="card-wide">
-        <div className="question-header">
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span className="question-number">
-              Q{gameState.currentQuestion + 1}/{questions.length}
-            </span>
-            <span className={`badge badge-${q.difficulty.toLowerCase()}`}>
-              {q.difficulty}
-            </span>
+    <div style={{
+      minHeight: '100vh',
+      background: '#1A1A2A',
+      display: 'flex', flexDirection: 'column',
+      padding: '0'
+    }}>
+      {/* Top bar */}
+      <div style={{
+        padding: '16px 20px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        borderBottom: '1px solid rgba(255,255,255,0.06)'
+      }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{
+            background: 'rgba(252,128,25,0.15)', color: '#FC8019',
+            padding: '6px 14px', borderRadius: 20,
+            fontSize: '0.85rem', fontWeight: 800
+          }}>
+            Q{gameState.currentQuestion + 1}/{questions.length}
           </div>
-          <CircularTimer totalTime={q.time} timeRemaining={timeRemaining} />
+          <div style={{ background: diff.bg, color: diff.color, padding: '6px 12px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700 }}>
+            {q.difficulty.toUpperCase()}
+          </div>
         </div>
-
-        <p className="question-text" style={{ marginBottom: 8 }}>
-          {q.text}
-        </p>
-
-        <div className="answer-grid">
-          {Object.entries(q.options).map(([letter, text]) => (
-            <button
-              key={letter}
-              className={`answer-btn${selected === letter ? ' selected' : ''}`}
-              style={{ background: OPTION_COLORS[letter], opacity: selected && selected !== letter ? 0.55 : 1 }}
-              onClick={() => handleSelect(letter)}
-              disabled={!!selected || answerLocked || timeRemaining <= 0}
-            >
-              <span className="answer-label">{letter}</span>
-              <span>{text}</span>
-            </button>
+        {/* Mini progress dots */}
+        <div style={{ display: 'flex', gap: 4 }}>
+          {questions.map((_, i) => (
+            <div key={i} style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: i < gameState.currentQuestion ? '#FC8019' : i === gameState.currentQuestion ? '#fff' : 'rgba(255,255,255,0.15)',
+              transition: 'background 0.3s'
+            }} />
           ))}
         </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px 20px', maxWidth: 680, margin: '0 auto', width: '100%' }}>
+        {/* Timer + Question */}
+        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', marginBottom: 28 }}>
+          <CircularTimer totalTime={q.time} questionStartTime={gameState.questionStartTime} />
+          <motion.p
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+            style={{
+              flex: 1,
+              fontSize: 'clamp(1.05rem, 2.5vw, 1.35rem)',
+              fontWeight: 800, color: '#fff',
+              lineHeight: 1.45, paddingTop: 8
+            }}
+          >
+            {q.text}
+          </motion.p>
+        </div>
+
+        {/* Answer grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {Object.entries(q.options).map(([letter, text], i) => {
+            const isSelected = selected === letter
+            const isDimmed = selected && !isSelected
+
+            return (
+              <motion.button
+                key={letter}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 + i * 0.07, type: 'spring', stiffness: 260, damping: 22 }}
+                whileHover={!selected ? { scale: 1.04, y: -3 } : {}}
+                whileTap={!selected ? { scale: 0.95 } : {}}
+                onClick={() => handleSelect(letter)}
+                disabled={!!selected}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '16px 18px', borderRadius: 16,
+                  background: ANS_COLORS[letter],
+                  border: isSelected ? '2px solid rgba(255,255,255,0.7)' : '2px solid transparent',
+                  color: '#fff', fontFamily: 'inherit',
+                  fontSize: '0.95rem', fontWeight: 600,
+                  cursor: selected ? 'default' : 'pointer',
+                  textAlign: 'left', lineHeight: 1.35,
+                  opacity: isDimmed ? 0.38 : 1,
+                  boxShadow: isSelected ? `0 0 20px ${ANS_COLORS[letter]}80` : `0 4px 16px rgba(0,0,0,0.25)`,
+                  transition: 'opacity 0.25s, border-color 0.2s, box-shadow 0.2s'
+                }}
+              >
+                <span style={{
+                  width: 32, height: 32, minWidth: 32, borderRadius: 8,
+                  background: 'rgba(255,255,255,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 800, fontSize: '0.9rem', flexShrink: 0
+                }}>
+                  {isSelected ? '✓' : letter}
+                </span>
+                <span>{text}</span>
+              </motion.button>
+            )
+          })}
+        </div>
+
+        {/* Locked in toast */}
+        <AnimatePresence>
+          {selected && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+              style={{
+                marginTop: 20, padding: '14px 20px',
+                background: 'rgba(72,187,120,0.12)',
+                border: '1px solid rgba(72,187,120,0.3)',
+                borderRadius: 14, textAlign: 'center',
+                color: '#48BB78', fontWeight: 700, fontSize: '0.95rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+              }}
+            >
+              <span>✅</span> Locked in! Waiting for the next question...
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )

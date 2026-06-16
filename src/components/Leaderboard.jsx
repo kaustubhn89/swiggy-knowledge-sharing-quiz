@@ -1,126 +1,258 @@
-import { useEffect } from 'react'
-import confetti from 'canvas-confetti'
+import { useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
-function getInitial(name) {
-  return (name || '?').charAt(0).toUpperCase()
+function useCountUp(target, duration = 1200) {
+  const countRef = useRef(null)
+  const [count, setCount] = [0, () => {}]
+  return target // simplified - use motion animate number
 }
 
-function getRankStyle(rank) {
-  if (rank === 1) return { background: '#fef9c3', color: '#a16207' }
-  if (rank === 2) return { background: '#f1f5f9', color: '#475569' }
-  if (rank === 3) return { background: '#fff7ed', color: '#9a3412' }
-  return { background: 'transparent', color: 'var(--text-muted)' }
+const PODIUM_CONFIG = [
+  { rank: 2, height: 80, color: '#C0C0C0', medal: '🥈', label: '2nd', delay: 0.3 },
+  { rank: 1, height: 120, color: '#FFD700', medal: '🥇', label: '1st', delay: 0.1 },
+  { rank: 3, height: 60, color: '#CD7F32', medal: '🥉', label: '3rd', delay: 0.5 },
+]
+
+function getInitial(name) { return (name || '?').charAt(0).toUpperCase() }
+
+const rowVariants = {
+  hidden: { opacity: 0, x: -20 },
+  show: (i) => ({ opacity: 1, x: 0, transition: { delay: i * 0.07, type: 'spring', stiffness: 260, damping: 24 } })
 }
 
 export default function Leaderboard({ players, isAdmin, onPlayAgain, playerId }) {
+  const confettiFired = useRef(false)
+
   const sorted = Object.entries(players)
     .map(([id, p]) => ({
-      id,
-      name: p.name,
+      id, name: p.name,
       totalScore: p.totalScore || 0,
       speedBonus: Object.values(p.answers || {}).reduce((s, a) => s + (a.speedBonus || 0), 0)
     }))
     .sort((a, b) => b.totalScore - a.totalScore || b.speedBonus - a.speedBonus)
 
-  const top3 = sorted.slice(0, 3)
-  const podiumOrder = top3.length >= 2
-    ? [top3[1], top3[0], top3[2]].filter(Boolean)
-    : top3
-
   useEffect(() => {
-    const launch = () => {
-      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ['#367588', '#E35D34', '#B8DBD9', '#7B5EA7', '#f59e0b'] })
-    }
-    launch()
-    const t = setTimeout(launch, 800)
-    return () => clearTimeout(t)
+    if (confettiFired.current) return
+    confettiFired.current = true
+    import('canvas-confetti').then(({ default: confetti }) => {
+      const fire = (opts) => confetti({ ...opts, colors: ['#FC8019','#FFD700','#48BB78','#367588','#7B5EA7'] })
+      fire({ particleCount: 100, spread: 70, origin: { y: 0.65 } })
+      setTimeout(() => fire({ particleCount: 80, spread: 100, origin: { x: 0.1, y: 0.6 } }), 400)
+      setTimeout(() => fire({ particleCount: 80, spread: 100, origin: { x: 0.9, y: 0.6 } }), 700)
+    })
   }, [])
 
+  const podiumPlayers = PODIUM_CONFIG.map(cfg => ({
+    ...cfg,
+    player: sorted.find((_, i) => i + 1 === cfg.rank) || null
+  })).filter(cfg => cfg.player)
+
+  const speedRanked = [...sorted].sort((a, b) => b.speedBonus - a.speedBonus)
+
   return (
-    <div className="screen-top" style={{ background: 'var(--off-white)', gap: 0 }}>
-      <div className="card-wide" style={{ marginTop: 0 }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>🏆</div>
-          <h2 style={{ color: 'var(--dark-teal)' }}>Final Leaderboard</h2>
-          <p className="text-muted mt-8">Swiggy KS Quiz · {sorted.length} players</p>
-        </div>
+    <div style={{
+      minHeight: '100vh', background: '#1A1A2A',
+      backgroundImage: 'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)',
+      backgroundSize: '24px 24px'
+    }}>
+      <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 20px' }}>
+
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', marginBottom: 8 }}
+        >
+          <motion.div
+            animate={{ y: [0, -6, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ fontSize: '3rem', marginBottom: 12 }}
+          >
+            🏆
+          </motion.div>
+          <h1 style={{
+            fontSize: 'clamp(1.6rem, 5vw, 2.4rem)', fontWeight: 800, letterSpacing: '-0.02em',
+            background: 'linear-gradient(135deg, #FFD700, #FC8019)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text', marginBottom: 6
+          }}>
+            Final Results
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.9rem' }}>
+            {sorted.length} players · Swiggy KS Quiz
+          </p>
+        </motion.div>
 
         {/* Podium */}
         {sorted.length > 0 && (
-          <div className="podium">
-            {podiumOrder.map((player, i) => {
-              const realRank = sorted.findIndex(p => p.id === player.id) + 1
-              const classes = ['podium-2', 'podium-1', 'podium-3']
-              const medals = ['🥈', '🥇', '🥉']
-              const cls = classes[i] || 'podium-2'
-              const medal = medals[i] || ''
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 12, margin: '40px 0 32px' }}>
+            {podiumPlayers.map(({ rank, height, color, medal, delay, player }) => (
+              <div key={rank} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.6, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 240, damping: 18, delay }}
+                  style={{
+                    width: rank === 1 ? 64 : 52, height: rank === 1 ? 64 : 52,
+                    borderRadius: '50%',
+                    background: color,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: rank === 1 ? '1.5rem' : '1.2rem',
+                    fontWeight: 900, color: '#1A1A2A',
+                    boxShadow: `0 0 24px ${color}60`
+                  }}
+                >
+                  {getInitial(player.name)}
+                </motion.div>
 
-              return (
-                <div key={player.id} className={`podium-slot ${cls}`}>
-                  <div className="podium-avatar">
-                    {getInitial(player.name)}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    color: '#fff', fontSize: rank === 1 ? '0.9rem' : '0.8rem',
+                    fontWeight: 700, maxWidth: 80, overflow: 'hidden',
+                    textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                  }}>
+                    {player.name}
                   </div>
-                  <div className="podium-name" title={player.name}>{player.name}</div>
-                  <div className="podium-score">{player.totalScore.toLocaleString()} pts</div>
-                  <div className="podium-block">{medal}</div>
+                  <div style={{ color: color, fontSize: '0.8rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                    {player.totalScore.toLocaleString()}
+                  </div>
                 </div>
-              )
-            })}
+
+                <motion.div
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{ delay: delay + 0.2, duration: 0.5, ease: 'backOut' }}
+                  style={{
+                    width: rank === 1 ? 88 : 72, height,
+                    background: `linear-gradient(180deg, ${color}30, ${color}15)`,
+                    borderRadius: '10px 10px 0 0',
+                    border: `1.5px solid ${color}40`,
+                    borderBottom: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: rank === 1 ? '2rem' : '1.5rem',
+                    transformOrigin: 'bottom'
+                  }}
+                >
+                  {medal}
+                </motion.div>
+              </div>
+            ))}
           </div>
         )}
 
-        <div className="divider" />
+        {/* Rankings table */}
+        <div style={{
+          background: '#252535',
+          borderRadius: 20, overflow: 'hidden',
+          border: '1.5px solid rgba(255,255,255,0.06)',
+          marginBottom: 20
+        }}>
+          {/* Table header */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '44px 1fr 90px 72px',
+            padding: '12px 20px',
+            background: 'rgba(255,255,255,0.03)',
+            borderBottom: '1px solid rgba(255,255,255,0.06)'
+          }}>
+            {['Rank', 'Player', 'Score', '⚡ Speed'].map(h => (
+              <span key={h} style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                {h}
+              </span>
+            ))}
+          </div>
 
-        {/* Full table */}
-        <table className="leaderboard-table">
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Name</th>
-              <th>Score</th>
-              <th>Speed Rank</th>
-            </tr>
-          </thead>
-          <tbody>
+          {/* Rows */}
+          <AnimatePresence>
             {sorted.map((player, index) => {
               const rank = index + 1
-              const speedRank = [...sorted].sort((a, b) => b.speedBonus - a.speedBonus).findIndex(p => p.id === player.id) + 1
+              const speedRank = speedRanked.findIndex(p => p.id === player.id) + 1
               const isMe = player.id === playerId
-              const medalEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null
+              const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32']
+              const rankColor = rankColors[rank - 1] || 'rgba(255,255,255,0.25)'
+              const rankLabels = ['🥇', '🥈', '🥉']
 
               return (
-                <tr key={player.id} className={isMe ? 'my-row' : ''}>
-                  <td>
-                    <span className="rank-badge" style={getRankStyle(rank)}>
-                      {medalEmoji || `#${rank}`}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div className="player-avatar" style={{ width: 28, height: 28, fontSize: '0.75rem', background: isMe ? 'var(--orange)' : 'var(--teal)' }}>
-                        {getInitial(player.name)}
-                      </div>
-                      <span style={{ fontWeight: isMe ? 700 : 500 }}>
-                        {player.name}{isMe && <span style={{ color: 'var(--teal)', fontSize: '0.75rem', marginLeft: 4 }}>(you)</span>}
-                      </span>
+                <motion.div
+                  key={player.id}
+                  custom={index}
+                  variants={rowVariants}
+                  initial="hidden"
+                  animate="show"
+                  style={{
+                    display: 'grid', gridTemplateColumns: '44px 1fr 90px 72px',
+                    padding: '13px 20px', alignItems: 'center',
+                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    background: isMe ? 'rgba(252,128,25,0.06)' : 'transparent',
+                    borderLeft: rank <= 3 ? `3px solid ${rankColor}` : '3px solid transparent'
+                  }}
+                >
+                  {/* Rank */}
+                  <span style={{
+                    fontWeight: 800, fontSize: rank <= 3 ? '1.1rem' : '0.9rem',
+                    color: rankColor
+                  }}>
+                    {rank <= 3 ? rankLabels[rank - 1] : `#${rank}`}
+                  </span>
+
+                  {/* Name */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                      background: isMe ? 'linear-gradient(135deg, #FC8019, #E35D34)' : `hsl(${(index * 47) % 360}, 55%, 50%)`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.8rem', fontWeight: 800, color: '#fff'
+                    }}>
+                      {getInitial(player.name)}
                     </div>
-                  </td>
-                  <td style={{ fontWeight: 700, color: 'var(--dark-teal)' }}>
+                    <span style={{ color: '#fff', fontWeight: isMe ? 700 : 500, fontSize: '0.9rem' }}>
+                      {player.name}
+                      {isMe && <span style={{ color: '#FC8019', fontSize: '0.7rem', marginLeft: 5 }}>(you)</span>}
+                    </span>
+                  </div>
+
+                  {/* Score */}
+                  <span style={{
+                    color: rank <= 3 ? rankColor : '#fff',
+                    fontWeight: 800, fontSize: '1rem',
+                    fontVariantNumeric: 'tabular-nums'
+                  }}>
                     {player.totalScore.toLocaleString()}
-                  </td>
-                  <td style={{ color: 'var(--text-muted)' }}>#{speedRank}</td>
-                </tr>
+                  </span>
+
+                  {/* Speed rank */}
+                  <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 600, fontSize: '0.85rem' }}>
+                    #{speedRank}
+                  </span>
+                </motion.div>
               )
             })}
-          </tbody>
-        </table>
+          </AnimatePresence>
 
+          {sorted.length === 0 && (
+            <div style={{ padding: '32px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>No players yet</div>
+          )}
+        </div>
+
+        {/* Play Again */}
         {isAdmin && (
-          <div style={{ marginTop: 24 }}>
-            <button className="btn btn-orange" onClick={onPlayAgain}>
-              🔄 Play Again
-            </button>
-          </div>
+          <motion.button
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={onPlayAgain}
+            style={{
+              width: '100%', padding: '16px',
+              borderRadius: 14, border: 'none',
+              background: 'linear-gradient(135deg, #FC8019, #E35D34)',
+              color: '#fff', fontSize: '1rem', fontWeight: 700,
+              fontFamily: 'inherit', cursor: 'pointer',
+              boxShadow: '0 8px 24px rgba(252,128,25,0.3)'
+            }}
+          >
+            🔄 Play Again
+          </motion.button>
         )}
       </div>
     </div>
