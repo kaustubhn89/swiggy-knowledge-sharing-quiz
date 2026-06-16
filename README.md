@@ -2,6 +2,7 @@
 
 Real-time multiplayer quiz for Swiggy Ads knowledge sharing sessions at Growisto.
 
+**GitHub:** https://github.com/kaustubhn89/swiggy-knowledge-sharing-quiz
 **Live URL:** _(add after Render deploy)_
 
 ## Quick Start
