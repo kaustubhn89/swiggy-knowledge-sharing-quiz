@@ -158,22 +158,20 @@ export default function AdminControl({ gameState, players, onNextQuestion, onSho
               <div key={letter} style={{
                 display: 'flex', gap: 8, alignItems: 'center',
                 padding: '8px 12px', borderRadius: 8,
-                background: letter === q.correct ? 'rgba(72,187,120,0.12)' : 'rgba(255,255,255,0.04)',
-                border: letter === q.correct ? '1px solid rgba(72,187,120,0.3)' : '1px solid rgba(255,255,255,0.05)'
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.05)'
               }}>
                 <span style={{
                   width: 22, height: 22, borderRadius: 5, flexShrink: 0,
-                  background: letter === q.correct ? 'rgba(72,187,120,0.25)' : ANS_COLORS[letter] + '40',
+                  background: ANS_COLORS[letter] + '40',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 800, fontSize: '0.75rem',
-                  color: letter === q.correct ? '#48BB78' : '#fff'
+                  fontWeight: 800, fontSize: '0.75rem', color: '#fff'
                 }}>
                   {letter}
                 </span>
-                <span style={{ color: letter === q.correct ? '#48BB78' : 'rgba(255,255,255,0.55)', fontSize: '0.82rem', fontWeight: 600 }}>
+                <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.82rem', fontWeight: 600 }}>
                   {text}
                 </span>
-                {letter === q.correct && <span style={{ marginLeft: 'auto', color: '#48BB78', fontSize: '0.75rem', fontWeight: 800 }}>✓ correct</span>}
               </div>
             ))}
           </div>
@@ -214,15 +212,13 @@ export default function AdminControl({ gameState, players, onNextQuestion, onSho
             <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
               {Object.entries(distribution).map(([letter, count]) => {
                 const pct = answeredCount > 0 ? (count / answeredCount) * 100 : 0
-                const isCorrect = letter === q.correct
                 return (
                   <div key={letter} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{
                       width: 22, height: 22, borderRadius: 5, flexShrink: 0,
-                      background: isCorrect ? 'rgba(72,187,120,0.25)' : ANS_COLORS[letter] + '40',
+                      background: ANS_COLORS[letter] + '40',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 800, fontSize: '0.72rem',
-                      color: isCorrect ? '#48BB78' : '#fff'
+                      fontWeight: 800, fontSize: '0.72rem', color: '#fff'
                     }}>
                       {letter}
                     </span>
@@ -230,11 +226,7 @@ export default function AdminControl({ gameState, players, onNextQuestion, onSho
                       <motion.div
                         animate={{ width: `${pct}%` }}
                         transition={{ duration: 0.4, ease: 'easeOut' }}
-                        style={{
-                          height: '100%',
-                          background: isCorrect ? '#48BB78' : ANS_COLORS[letter],
-                          borderRadius: 3, opacity: 0.8
-                        }}
+                        style={{ height: '100%', background: ANS_COLORS[letter], borderRadius: 3, opacity: 0.8 }}
                       />
                     </div>
                     <span style={{ width: 18, fontWeight: 700, color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', textAlign: 'right' }}>{count}</span>
