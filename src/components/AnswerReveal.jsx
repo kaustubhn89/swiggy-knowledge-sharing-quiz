@@ -5,7 +5,7 @@ import { questions } from '../questions'
 const ANS_COLORS = { A: '#367588', B: '#1C4A57', C: '#FC8019', D: '#7B5EA7' }
 
 export default function AnswerReveal({ data }) {
-  const { questionIdx, answer, score, speedBonus, isCorrect } = data
+  const { questionIdx, answer, score, isCorrect } = data
   const q = questions[questionIdx]
   const confettiFired = useRef(false)
 
@@ -113,22 +113,15 @@ export default function AnswerReveal({ data }) {
               color: '#48BB78', whiteSpace: 'nowrap'
             }}
           >
-            +{score.toLocaleString()} pts
+            +{score} pts
           </motion.div>
         )}
         <div style={{ fontSize: '2rem', fontWeight: 900, color: isCorrect ? '#48BB78' : '#F56565', fontVariantNumeric: 'tabular-nums' }}>
-          {isCorrect ? `+${score.toLocaleString()}` : '0'} pts
+          {isCorrect ? '+3' : '−1'} pts
         </div>
-        {isCorrect && speedBonus > 0 && (
-          <div style={{ color: 'rgba(72,187,120,0.7)', fontSize: '0.8rem', fontWeight: 600, marginTop: 2 }}>
-            1000 base + {speedBonus} speed bonus ⚡
-          </div>
-        )}
-        {!isCorrect && (
-          <div style={{ color: 'rgba(245,101,101,0.6)', fontSize: '0.8rem', fontWeight: 600, marginTop: 2 }}>
-            Better luck on the next one!
-          </div>
-        )}
+        <div style={{ color: isCorrect ? 'rgba(72,187,120,0.7)' : 'rgba(245,101,101,0.6)', fontSize: '0.8rem', fontWeight: 600, marginTop: 2 }}>
+          {isCorrect ? 'Nice work! Keep it up.' : 'Better luck on the next one!'}
+        </div>
       </motion.div>
 
       <motion.p

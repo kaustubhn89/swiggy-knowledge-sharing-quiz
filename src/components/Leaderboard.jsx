@@ -27,9 +27,9 @@ export default function Leaderboard({ players, isAdmin, onPlayAgain, playerId })
     .map(([id, p]) => ({
       id, name: p.name,
       totalScore: p.totalScore || 0,
-      speedBonus: Object.values(p.answers || {}).reduce((s, a) => s + (a.speedBonus || 0), 0)
+      correctCount: Object.values(p.answers || {}).filter(a => a.score === 3).length
     }))
-    .sort((a, b) => b.totalScore - a.totalScore || b.speedBonus - a.speedBonus)
+    .sort((a, b) => b.totalScore - a.totalScore || b.correctCount - a.correctCount)
 
   useEffect(() => {
     if (confettiFired.current) return
@@ -46,8 +46,6 @@ export default function Leaderboard({ players, isAdmin, onPlayAgain, playerId })
     ...cfg,
     player: sorted.find((_, i) => i + 1 === cfg.rank) || null
   })).filter(cfg => cfg.player)
-
-  const speedRanked = [...sorted].sort((a, b) => b.speedBonus - a.speedBonus)
 
   return (
     <div style={{
@@ -154,7 +152,7 @@ export default function Leaderboard({ players, isAdmin, onPlayAgain, playerId })
             background: 'rgba(255,255,255,0.03)',
             borderBottom: '1px solid rgba(255,255,255,0.06)'
           }}>
-            {['Rank', 'Player', 'Score', '⚡ Speed'].map(h => (
+            {['Rank', 'Player', 'Score', 'Correct'].map(h => (
               <span key={h} style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {h}
               </span>
@@ -165,7 +163,6 @@ export default function Leaderboard({ players, isAdmin, onPlayAgain, playerId })
           <AnimatePresence>
             {sorted.map((player, index) => {
               const rank = index + 1
-              const speedRank = speedRanked.findIndex(p => p.id === player.id) + 1
               const isMe = player.id === playerId
               const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32']
               const rankColor = rankColors[rank - 1] || 'rgba(255,255,255,0.25)'
@@ -219,9 +216,9 @@ export default function Leaderboard({ players, isAdmin, onPlayAgain, playerId })
                     {player.totalScore.toLocaleString()}
                   </span>
 
-                  {/* Speed rank */}
-                  <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 600, fontSize: '0.85rem' }}>
-                    #{speedRank}
+                  {/* Correct count */}
+                  <span style={{ color: 'rgba(72,187,120,0.7)', fontWeight: 700, fontSize: '0.85rem' }}>
+                    {player.correctCount}/8
                   </span>
                 </motion.div>
               )

@@ -77,7 +77,6 @@ export default function App() {
             questionIdx: prevQuestion.current,
             answer: prevAns.answer,
             score: prevAns.score || 0,
-            speedBonus: prevAns.speedBonus || 0,
             isCorrect: prevAns.answer === questions[prevQuestion.current].correct
           })
           if (revealTimeoutRef.current) clearTimeout(revealTimeoutRef.current)
@@ -116,15 +115,14 @@ export default function App() {
 
     const q = questions[gameState.currentQuestion]
     const correct = answer === q.correct
-    const speedBonus = correct ? Math.round((timeRemaining / q.time) * 500) : 0
-    const score = correct ? 1000 + speedBonus : 0
+    const score = correct ? 3 : -1
 
     const existingAnswers = playersRef.current[playerId]?.answers || {}
-    const newAnswers = { ...existingAnswers, [gameState.currentQuestion]: { answer, timestamp: Date.now(), score, speedBonus } }
+    const newAnswers = { ...existingAnswers, [gameState.currentQuestion]: { answer, timestamp: Date.now(), score } }
     const newTotal = Object.values(newAnswers).reduce((s, a) => s + (a.score || 0), 0)
 
     await update(ref(db, `players/${playerId}`), {
-      [`answers/${gameState.currentQuestion}`]: { answer, timestamp: Date.now(), score, speedBonus },
+      [`answers/${gameState.currentQuestion}`]: { answer, timestamp: Date.now(), score },
       totalScore: newTotal
     })
   }
