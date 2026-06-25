@@ -149,9 +149,14 @@ export default function App() {
     setAnswerLocked(true)
     setLockedAnswer(answer)
 
-    const q       = questions[gameState.currentQuestion]
-    const correct = answer === q.correct
-    const score   = correct ? 3 : -1
+    const q             = questions[gameState.currentQuestion]
+    const correct       = answer === q.correct
+    const elapsed       = (Date.now() - gameState.questionStartTime) / 1000
+    const timeRemaining = Math.max(0, q.time - elapsed)
+    // Speed-based: correct = 3–10 pts scaled by time remaining; wrong = -2
+    const score = correct
+      ? Math.round(10 * Math.max(0.3, timeRemaining / q.time))
+      : -2
 
     const existingAnswers = playersRef.current[playerId]?.answers || {}
     const newAnswers      = { ...existingAnswers, [gameState.currentQuestion]: { answer, timestamp: Date.now(), score } }

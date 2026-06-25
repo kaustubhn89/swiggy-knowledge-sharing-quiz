@@ -28,7 +28,7 @@ export default function Leaderboard({ players, isAdmin, onPlayAgain, onSaveSessi
     .map(([id, p]) => ({
       id, name: p.name,
       totalScore: p.totalScore || 0,
-      correctCount: Object.values(p.answers || {}).filter(a => a.score === 3).length
+      correctCount: Object.values(p.answers || {}).filter(a => a.score > 0).length
     }))
     .sort((a, b) => b.totalScore - a.totalScore || b.correctCount - a.correctCount)
 

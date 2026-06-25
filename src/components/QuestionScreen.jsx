@@ -82,22 +82,32 @@ function CircularTimer({ totalTime, questionStartTime }) {
 
 export default function QuestionScreen({ gameState, onAnswer }) {
   const q           = questions[gameState.currentQuestion]
-  const [selected, setSelected] = useState(null)
-  const [timeUp, setTimeUp]     = useState(false)
-  const lockedRef   = useRef(false)
+  const [selected, setSelected]     = useState(null)
+  const [timeUp, setTimeUp]         = useState(false)
+  const [livePoints, setLivePoints] = useState(10)
+  const lockedRef    = useRef(false)
   const timeUpRafRef = useRef()
+  const lastPtsRef   = useRef(10)
 
   useEffect(() => {
     lockedRef.current = false
+    lastPtsRef.current = 10
     setSelected(null)
     setTimeUp(false)
+    setLivePoints(10)
   }, [gameState.currentQuestion])
 
   useEffect(() => {
     cancelAnimationFrame(timeUpRafRef.current)
     const check = () => {
       const elapsed = (Date.now() - gameState.questionStartTime) / 1000
-      if (elapsed >= q.time) { setTimeUp(true); return }
+      if (elapsed >= q.time) {
+        setTimeUp(true)
+        if (lastPtsRef.current !== 3) { lastPtsRef.current = 3; setLivePoints(3) }
+        return
+      }
+      const pts = Math.round(10 * Math.max(0.3, (q.time - elapsed) / q.time))
+      if (pts !== lastPtsRef.current) { lastPtsRef.current = pts; setLivePoints(pts) }
       timeUpRafRef.current = requestAnimationFrame(check)
     }
     timeUpRafRef.current = requestAnimationFrame(check)
@@ -114,6 +124,7 @@ export default function QuestionScreen({ gameState, onAnswer }) {
   }, [selected, gameState.questionStartTime, q.time, onAnswer])
 
   const diff = DIFF_COLORS[q.difficulty] || DIFF_COLORS.Easy
+  const livePointsColor = livePoints >= 8 ? '#48BB78' : livePoints >= 5 ? '#FC8019' : '#F56565'
 
   return (
     <div style={{ minHeight: '100vh', background: '#1A1A2A', display: 'flex', flexDirection: 'column' }}>
@@ -160,19 +171,42 @@ export default function QuestionScreen({ gameState, onAnswer }) {
           </motion.p>
         </div>
 
-        {/* Scoring hint */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-          {[{ label: '+3', sub: 'correct', color: '#48BB78' }, { label: '−1', sub: 'wrong', color: '#F56565' }, { label: '0', sub: 'skip', color: 'rgba(255,255,255,0.25)' }].map(s => (
-            <div key={s.label} style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '4px 10px', borderRadius: 20,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.06)'
-            }}>
-              <span style={{ color: s.color, fontWeight: 800, fontSize: '0.8rem' }}>{s.label}</span>
-              <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', fontWeight: 500 }}>{s.sub}</span>
-            </div>
-          ))}
+        {/* Live scoring hint */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center' }}>
+          {/* Live points — counts down as time passes */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '5px 12px', borderRadius: 20,
+            background: livePointsColor + '18',
+            border: `1px solid ${livePointsColor}45`,
+            transition: 'background 0.5s, border-color 0.5s'
+          }}>
+            <span style={{ fontSize: '0.82rem' }}>⚡</span>
+            <motion.span
+              key={livePoints}
+              initial={{ scale: 1.25, opacity: 0.5 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.14 }}
+              style={{
+                color: livePointsColor, fontWeight: 900, fontSize: '0.88rem',
+                fontVariantNumeric: 'tabular-nums',
+                transition: 'color 0.5s'
+              }}
+            >
+              {livePoints}
+            </motion.span>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', fontWeight: 500 }}>pts if correct</span>
+          </div>
+          {/* Wrong penalty */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <span style={{ color: '#F56565', fontWeight: 800, fontSize: '0.8rem' }}>−2</span>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', fontWeight: 500 }}>wrong</span>
+          </div>
+          {/* Timeout */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <span style={{ color: 'rgba(255,255,255,0.25)', fontWeight: 800, fontSize: '0.8rem' }}>0</span>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', fontWeight: 500 }}>timeout</span>
+          </div>
         </div>
 
         {/* Time's up — hide options and show waiting screen */}
