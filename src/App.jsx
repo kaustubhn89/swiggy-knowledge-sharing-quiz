@@ -108,7 +108,7 @@ export default function App() {
     if (gameState.currentQuestion !== prevQuestion.current) {
       if (prevQuestion.current >= 0 && userTypeRef.current === 'player') {
         const prevAns = playersRef.current[playerId]?.answers?.[prevQuestion.current]
-        if (prevAns) {
+        if (prevAns && prevAns.answer !== null) {
           setRevealData({
             questionIdx: prevQuestion.current,
             answer:      prevAns.answer,
@@ -149,14 +149,11 @@ export default function App() {
     setAnswerLocked(true)
     setLockedAnswer(answer)
 
-    const q             = questions[gameState.currentQuestion]
-    const correct       = answer === q.correct
-    const elapsed       = (Date.now() - gameState.questionStartTime) / 1000
-    const timeRemaining = Math.max(0, q.time - elapsed)
-    // Speed-based: correct = 3–10 pts scaled by time remaining; wrong = -2
-    const score = correct
-      ? Math.round(10 * Math.max(0.3, timeRemaining / q.time))
-      : -2
+    const q       = questions[gameState.currentQuestion]
+    const correct = answer === q.correct
+    const elapsed = (Date.now() - gameState.questionStartTime) / 1000
+    // +5 if correct within 15s, +3 if correct after 15s, 0 if wrong
+    const score = correct ? (elapsed <= 15 ? 5 : 3) : 0
 
     const existingAnswers = playersRef.current[playerId]?.answers || {}
     const newAnswers      = { ...existingAnswers, [gameState.currentQuestion]: { answer, timestamp: Date.now(), score } }
@@ -164,6 +161,23 @@ export default function App() {
 
     await update(ref(db, `sessions/${activeSessionId}/players/${playerId}`), {
       [`answers/${gameState.currentQuestion}`]: { answer, timestamp: Date.now(), score },
+      totalScore: newTotal
+    })
+  }
+
+  const handleTimeout = async () => {
+    if (answerLocked || !activeSessionId) return
+    setAnswerLocked(true)
+
+    const qIdx            = gameState.currentQuestion
+    const existingAnswers = playersRef.current[playerId]?.answers || {}
+    if (existingAnswers[qIdx]) return
+
+    const newAnswers = { ...existingAnswers, [qIdx]: { answer: null, timestamp: Date.now(), score: -1 } }
+    const newTotal   = Object.values(newAnswers).reduce((s, a) => s + (a.score || 0), 0)
+
+    await update(ref(db, `sessions/${activeSessionId}/players/${playerId}`), {
+      [`answers/${qIdx}`]: { answer: null, timestamp: Date.now(), score: -1 },
       totalScore: newTotal
     })
   }
@@ -313,7 +327,7 @@ export default function App() {
         const existingAnswer = players[playerId]?.answers?.[gameState.currentQuestion]
         const isLocked       = answerLocked || !!existingAnswer
         if (isLocked) return <AnswerLocked answer={lockedAnswer || existingAnswer?.answer} currentQuestion={gameState.currentQuestion} />
-        return <QuestionScreen gameState={gameState} onAnswer={handleAnswer} />
+        return <QuestionScreen gameState={gameState} onAnswer={handleAnswer} onTimeout={handleTimeout} />
       }
 
       return <Leaderboard players={players} isAdmin={false} playerId={playerId} />

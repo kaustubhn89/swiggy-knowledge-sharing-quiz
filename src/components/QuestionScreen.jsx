@@ -80,21 +80,21 @@ function CircularTimer({ totalTime, questionStartTime }) {
   )
 }
 
-export default function QuestionScreen({ gameState, onAnswer }) {
+export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
   const q           = questions[gameState.currentQuestion]
-  const [selected, setSelected]     = useState(null)
-  const [timeUp, setTimeUp]         = useState(false)
-  const [livePoints, setLivePoints] = useState(10)
+  const [selected, setSelected] = useState(null)
+  const [timeUp, setTimeUp]     = useState(false)
+  const [fastZone, setFastZone] = useState(true)
   const lockedRef    = useRef(false)
+  const fastZoneRef  = useRef(true)
   const timeUpRafRef = useRef()
-  const lastPtsRef   = useRef(10)
 
   useEffect(() => {
-    lockedRef.current = false
-    lastPtsRef.current = 10
+    lockedRef.current  = false
+    fastZoneRef.current = true
     setSelected(null)
     setTimeUp(false)
-    setLivePoints(10)
+    setFastZone(true)
   }, [gameState.currentQuestion])
 
   useEffect(() => {
@@ -103,16 +103,19 @@ export default function QuestionScreen({ gameState, onAnswer }) {
       const elapsed = (Date.now() - gameState.questionStartTime) / 1000
       if (elapsed >= q.time) {
         setTimeUp(true)
-        if (lastPtsRef.current !== 3) { lastPtsRef.current = 3; setLivePoints(3) }
+        if (!lockedRef.current) {
+          lockedRef.current = true
+          onTimeout?.()
+        }
         return
       }
-      const pts = Math.round(10 * Math.max(0.3, (q.time - elapsed) / q.time))
-      if (pts !== lastPtsRef.current) { lastPtsRef.current = pts; setLivePoints(pts) }
+      const isFast = elapsed <= 15
+      if (isFast !== fastZoneRef.current) { fastZoneRef.current = isFast; setFastZone(isFast) }
       timeUpRafRef.current = requestAnimationFrame(check)
     }
     timeUpRafRef.current = requestAnimationFrame(check)
     return () => cancelAnimationFrame(timeUpRafRef.current)
-  }, [gameState.currentQuestion, gameState.questionStartTime, q.time])
+  }, [gameState.currentQuestion, gameState.questionStartTime, q.time, onTimeout])
 
   const handleSelect = useCallback((letter) => {
     if (selected || lockedRef.current) return
@@ -124,7 +127,6 @@ export default function QuestionScreen({ gameState, onAnswer }) {
   }, [selected, gameState.questionStartTime, q.time, onAnswer])
 
   const diff = DIFF_COLORS[q.difficulty] || DIFF_COLORS.Easy
-  const livePointsColor = livePoints >= 8 ? '#48BB78' : livePoints >= 5 ? '#FC8019' : '#F56565'
 
   return (
     <div style={{ minHeight: '100vh', background: '#1A1A2A', display: 'flex', flexDirection: 'column' }}>
@@ -171,41 +173,41 @@ export default function QuestionScreen({ gameState, onAnswer }) {
           </motion.p>
         </div>
 
-        {/* Live scoring hint */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center' }}>
-          {/* Live points — counts down as time passes */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: '5px 12px', borderRadius: 20,
-            background: livePointsColor + '18',
-            border: `1px solid ${livePointsColor}45`,
-            transition: 'background 0.5s, border-color 0.5s'
-          }}>
-            <span style={{ fontSize: '0.82rem' }}>⚡</span>
-            <motion.span
-              key={livePoints}
-              initial={{ scale: 1.25, opacity: 0.5 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.14 }}
-              style={{
-                color: livePointsColor, fontWeight: 900, fontSize: '0.88rem',
-                fontVariantNumeric: 'tabular-nums',
-                transition: 'color 0.5s'
-              }}
-            >
-              {livePoints}
-            </motion.span>
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', fontWeight: 500 }}>pts if correct</span>
-          </div>
-          {/* Wrong penalty */}
+        {/* Scoring hint */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Fast zone badge — switches at 15s */}
+          <motion.div
+            key={fastZone ? 'fast' : 'slow'}
+            initial={{ scale: 0.88, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.22, type: 'spring', stiffness: 300, damping: 22 }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '5px 12px', borderRadius: 20,
+              background: fastZone ? 'rgba(72,187,120,0.15)' : 'rgba(252,128,25,0.1)',
+              border: `1px solid ${fastZone ? 'rgba(72,187,120,0.4)' : 'rgba(252,128,25,0.3)'}`
+            }}
+          >
+            {fastZone && <span style={{ fontSize: '0.82rem' }}>⚡</span>}
+            <span style={{
+              color: fastZone ? '#48BB78' : '#FC8019',
+              fontWeight: 900, fontSize: '0.88rem'
+            }}>
+              {fastZone ? '+5' : '+3'}
+            </span>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', fontWeight: 500 }}>
+              {fastZone ? 'correct · first 15s' : 'correct · after 15s'}
+            </span>
+          </motion.div>
+          {/* Wrong */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <span style={{ color: '#F56565', fontWeight: 800, fontSize: '0.8rem' }}>−2</span>
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', fontWeight: 500 }}>wrong</span>
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 800, fontSize: '0.8rem' }}>0</span>
+            <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.72rem', fontWeight: 500 }}>wrong</span>
           </div>
-          {/* Timeout */}
+          {/* No answer */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <span style={{ color: 'rgba(255,255,255,0.25)', fontWeight: 800, fontSize: '0.8rem' }}>0</span>
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', fontWeight: 500 }}>timeout</span>
+            <span style={{ color: '#F56565', fontWeight: 800, fontSize: '0.8rem' }}>−1</span>
+            <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.72rem', fontWeight: 500 }}>no answer</span>
           </div>
         </div>
 

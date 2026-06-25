@@ -77,11 +77,12 @@ export default function RulesScreen({ onReady }) {
 
         {/* Rules */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
-          <RuleItem icon="📋" label={`${questions.length} questions`}      sub="Swiggy Instamart Ads knowledge" accent="orange" />
-          <RuleItem icon="⏱️" label="30 seconds per question"             sub="Answer before time runs out!" />
-          <RuleItem icon="⚡" label="3–10 pts for correct answer"         sub="Faster = more points. First second = 10 pts!" accent="green" />
-          <RuleItem icon="❌" label="−2 pts for wrong answer"             sub="Think before you pick" accent="red" />
-          <RuleItem icon="⏭️" label="0 pts if time runs out"              sub="No answer = no penalty" />
+          <RuleItem icon="📋" label={`${questions.length} questions`}       sub="Swiggy Instamart Ads knowledge" accent="orange" />
+          <RuleItem icon="⏱️" label="30 seconds per question"              sub="Answer before time runs out!" />
+          <RuleItem icon="⚡" label="+5 pts — answer in first 15 seconds"  sub="Fast and correct = full points" accent="green" />
+          <RuleItem icon="✅" label="+3 pts — correct after 15 seconds"    sub="Still rewarded, just less" accent="green" />
+          <RuleItem icon="➖" label="0 pts for wrong answer"               sub="No penalty for guessing wrong" />
+          <RuleItem icon="⏭️" label="−1 pt if you don't answer"           sub="Time runs out = small penalty" accent="red" />
         </div>
 
         <motion.button

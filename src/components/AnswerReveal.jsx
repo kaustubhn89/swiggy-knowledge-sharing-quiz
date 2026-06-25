@@ -116,13 +116,13 @@ export default function AnswerReveal({ data }) {
             +{score} pts
           </motion.div>
         )}
-        <div style={{ fontSize: '2rem', fontWeight: 900, color: isCorrect ? '#48BB78' : '#F56565', fontVariantNumeric: 'tabular-nums' }}>
-          {isCorrect ? `+${score}` : score} pts
+        <div style={{ fontSize: '2rem', fontWeight: 900, color: isCorrect ? '#48BB78' : 'rgba(255,255,255,0.4)', fontVariantNumeric: 'tabular-nums' }}>
+          {isCorrect ? `+${score}` : '0'} pts
         </div>
-        <div style={{ color: isCorrect ? 'rgba(72,187,120,0.7)' : 'rgba(245,101,101,0.6)', fontSize: '0.8rem', fontWeight: 600, marginTop: 2 }}>
+        <div style={{ color: isCorrect ? 'rgba(72,187,120,0.7)' : 'rgba(255,255,255,0.3)', fontSize: '0.8rem', fontWeight: 600, marginTop: 2 }}>
           {isCorrect
-            ? score >= 8 ? '⚡ Fast answer! Great work.' : score >= 5 ? 'Nice work! Keep it up.' : 'Correct, but answer faster next time!'
-            : 'Better luck on the next one!'}
+            ? score >= 5 ? '⚡ Fast answer — full points!' : 'Correct! Answer faster for +5 next time.'
+            : 'Wrong answer — 0 pts. Better luck next one!'}
         </div>
       </motion.div>
 
