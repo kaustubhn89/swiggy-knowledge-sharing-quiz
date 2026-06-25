@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { questions } from '../questions'
 
 function useCountUp(target, duration = 1200) {
   const countRef = useRef(null)
@@ -218,7 +219,7 @@ export default function Leaderboard({ players, isAdmin, onPlayAgain, onSaveSessi
 
                   {/* Correct count */}
                   <span style={{ color: 'rgba(72,187,120,0.7)', fontWeight: 700, fontSize: '0.85rem' }}>
-                    {player.correctCount}/8
+                    {player.correctCount}/{questions.length}
                   </span>
                 </motion.div>
               )

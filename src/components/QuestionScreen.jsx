@@ -83,12 +83,26 @@ function CircularTimer({ totalTime, questionStartTime }) {
 export default function QuestionScreen({ gameState, onAnswer }) {
   const q           = questions[gameState.currentQuestion]
   const [selected, setSelected] = useState(null)
+  const [timeUp, setTimeUp]     = useState(false)
   const lockedRef   = useRef(false)
+  const timeUpRafRef = useRef()
 
   useEffect(() => {
     lockedRef.current = false
     setSelected(null)
+    setTimeUp(false)
   }, [gameState.currentQuestion])
+
+  useEffect(() => {
+    cancelAnimationFrame(timeUpRafRef.current)
+    const check = () => {
+      const elapsed = (Date.now() - gameState.questionStartTime) / 1000
+      if (elapsed >= q.time) { setTimeUp(true); return }
+      timeUpRafRef.current = requestAnimationFrame(check)
+    }
+    timeUpRafRef.current = requestAnimationFrame(check)
+    return () => cancelAnimationFrame(timeUpRafRef.current)
+  }, [gameState.currentQuestion, gameState.questionStartTime, q.time])
 
   const handleSelect = useCallback((letter) => {
     if (selected || lockedRef.current) return
@@ -161,7 +175,34 @@ export default function QuestionScreen({ gameState, onAnswer }) {
           ))}
         </div>
 
-        {/* Answer grid */}
+        {/* Time's up — hide options and show waiting screen */}
+        {timeUp && !selected && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+            style={{
+              padding: '28px 20px', borderRadius: 16, textAlign: 'center',
+              background: 'rgba(245,101,101,0.07)',
+              border: '1px solid rgba(245,101,101,0.2)'
+            }}
+          >
+            <motion.div
+              animate={{ rotate: [0, -10, 10, 0] }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              style={{ fontSize: '2.4rem', marginBottom: 10 }}
+            >⏰</motion.div>
+            <div style={{ color: '#F56565', fontWeight: 800, fontSize: '1.05rem', marginBottom: 6 }}>
+              Time&apos;s up!
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.85rem' }}>
+              Waiting for the next question...
+            </div>
+          </motion.div>
+        )}
+
+        {/* Answer grid — hidden once time expires (unless already answered) */}
+        {(!timeUp || selected) && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {Object.entries(q.options).map(([letter, text], i) => {
             const isSelected = selected === letter
@@ -220,6 +261,7 @@ export default function QuestionScreen({ gameState, onAnswer }) {
             )
           })}
         </div>
+        )}
 
         {/* Locked toast */}
         <AnimatePresence>

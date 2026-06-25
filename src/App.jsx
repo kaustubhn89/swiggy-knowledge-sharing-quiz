@@ -4,6 +4,7 @@ import { ref, onValue, set, update, remove } from 'firebase/database'
 import { db } from './firebase'
 import { questions } from './questions'
 import Landing from './components/Landing'
+import RulesScreen from './components/RulesScreen'
 import PlayerJoin from './components/PlayerJoin'
 import WaitingRoom from './components/WaitingRoom'
 import QuestionScreen from './components/QuestionScreen'
@@ -35,9 +36,10 @@ const pageVariants = {
 }
 
 export default function App() {
-  const [userType, setUserType]   = useState(null)
-  const [adminAuth, setAdminAuth] = useState(false)
-  const [adminView, setAdminView] = useState('sessions') // 'sessions' | 'managing'
+  const [userType, setUserType]         = useState(null)
+  const [adminAuth, setAdminAuth]       = useState(false)
+  const [adminView, setAdminView]       = useState('sessions') // 'sessions' | 'managing'
+  const [rulesAcknowledged, setRulesAcknowledged] = useState(false)
 
   const [playerId] = useState(() => {
     let id = localStorage.getItem('sqPlayerId')
@@ -187,14 +189,13 @@ export default function App() {
 
   // ── Session management handlers ────────────────────
 
-  const handleNewGame = async () => {
-    // Clean up any unsaved sessions before starting fresh
+  const handleNewGame = async (customName) => {
     Object.entries(allSessions).forEach(([id, s]) => {
       if (!s.saved) remove(ref(db, `sessions/${id}`))
     })
     const sessionId = Date.now().toString()
     await set(ref(db, `sessions/${sessionId}`), {
-      meta:    { name: genSessionName(), status: 'waiting', currentQuestion: 0, questionStartTime: 0, createdAt: Date.now(), saved: false },
+      meta:    { name: customName || genSessionName(), status: 'waiting', currentQuestion: 0, questionStartTime: 0, createdAt: Date.now(), saved: false },
       players: {}
     })
     await set(ref(db, 'activeSessionId'), sessionId)
@@ -247,6 +248,7 @@ export default function App() {
       return 'admin-leaderboard'
     }
     if (userType === 'player') {
+      if (!rulesAcknowledged && !playerName)                   return 'player-rules'
       if (!playerName)                                         return 'player-join'
       if (!activeSessionId || gameState.status === 'waiting') return 'player-waiting'
       if (revealData)                                          return `reveal-${revealData.questionIdx}`
@@ -296,7 +298,8 @@ export default function App() {
     }
 
     if (userType === 'player') {
-      if (!playerName) return <PlayerJoin onJoin={handlePlayerJoin} onBack={() => setUserType(null)} noSession={!activeSessionId} />
+      if (!rulesAcknowledged && !playerName) return <RulesScreen onReady={() => setRulesAcknowledged(true)} />
+      if (!playerName) return <PlayerJoin onJoin={handlePlayerJoin} onBack={() => { setUserType(null); setRulesAcknowledged(false) }} noSession={!activeSessionId} />
 
       if (!activeSessionId || gameState.status === 'waiting') return <WaitingRoom playerName={playerName} players={players} />
 

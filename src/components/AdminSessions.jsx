@@ -13,8 +13,29 @@ function formatDate(ts) {
     ', ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
 }
 
+function genDefaultName() {
+  const now = new Date()
+  const d = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const t = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+  return `Quiz – ${d}, ${t}`
+}
+
 export default function AdminSessions({ sessions, activeSessionId, onNewGame, onContinue, onRerun, onDelete }) {
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [showNameModal, setShowNameModal]  = useState(false)
+  const [newQuizName,   setNewQuizName]    = useState('')
+
+  const openNameModal = () => {
+    setNewQuizName(genDefaultName())
+    setShowNameModal(true)
+  }
+
+  const handleStartNewQuiz = () => {
+    const name = newQuizName.trim()
+    if (!name) return
+    setShowNameModal(false)
+    onNewGame(name)
+  }
 
   const sessionList = Object.entries(sessions)
     .filter(([, s]) => s.saved)
@@ -49,7 +70,7 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
           <motion.button
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
-            onClick={onNewGame}
+            onClick={openNameModal}
             style={{
               padding: '12px 22px', borderRadius: 12, border: 'none',
               background: 'linear-gradient(135deg, #FC8019, #E35D34)',
@@ -135,7 +156,7 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
             <motion.button
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
-              onClick={onNewGame}
+              onClick={openNameModal}
               style={{
                 padding: '14px 32px', borderRadius: 12, border: 'none',
                 background: 'linear-gradient(135deg, #FC8019, #E35D34)',
@@ -258,6 +279,88 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
           Sessions are stored in Firebase · Delete removes permanently
         </p>
       </div>
+
+      {/* ── Name Modal ───────────────────────── */}
+      <AnimatePresence>
+        {showNameModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0,
+              background: 'rgba(0,0,0,0.72)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 200, padding: 20
+            }}
+            onClick={e => { if (e.target === e.currentTarget) setShowNameModal(false) }}
+          >
+            <motion.div
+              initial={{ scale: 0.88, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+              style={{
+                background: '#252535', borderRadius: 20, padding: '28px 24px',
+                width: '100%', maxWidth: 400,
+                border: '1.5px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 24px 60px rgba(0,0,0,0.5)'
+              }}
+            >
+              <h3 style={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem', marginBottom: 6 }}>
+                Name this Quiz
+              </h3>
+              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem', marginBottom: 20 }}>
+                Give it a name so you can find, save, and rerun it later.
+              </p>
+              <input
+                type="text"
+                value={newQuizName}
+                onChange={e => setNewQuizName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && newQuizName.trim() && handleStartNewQuiz()}
+                maxLength={50}
+                autoFocus
+                placeholder="e.g. Instamart Ads – Round 1"
+                style={{
+                  width: '100%', padding: '13px 16px',
+                  borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(255,255,255,0.05)', color: '#fff',
+                  fontSize: '0.95rem', fontFamily: 'inherit', fontWeight: 600,
+                  outline: 'none', marginBottom: 14, boxSizing: 'border-box'
+                }}
+                onFocus={e => e.target.style.borderColor = 'rgba(252,128,25,0.5)'}
+                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
+              />
+              <button
+                onClick={handleStartNewQuiz}
+                disabled={!newQuizName.trim()}
+                style={{
+                  width: '100%', padding: '13px',
+                  borderRadius: 10, border: 'none',
+                  background: newQuizName.trim() ? 'linear-gradient(135deg, #FC8019, #E35D34)' : 'rgba(255,255,255,0.08)',
+                  color: newQuizName.trim() ? '#fff' : 'rgba(255,255,255,0.25)',
+                  fontSize: '0.95rem', fontWeight: 700,
+                  fontFamily: 'inherit', cursor: newQuizName.trim() ? 'pointer' : 'not-allowed',
+                  marginBottom: 8, transition: 'background 0.2s, color 0.2s'
+                }}
+              >
+                Start Quiz →
+              </button>
+              <button
+                onClick={() => setShowNameModal(false)}
+                style={{
+                  width: '100%', padding: '10px', borderRadius: 10,
+                  border: 'none', background: 'transparent',
+                  color: 'rgba(255,255,255,0.28)', fontSize: '0.85rem',
+                  fontFamily: 'inherit', cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
