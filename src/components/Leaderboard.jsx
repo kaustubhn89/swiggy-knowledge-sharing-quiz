@@ -20,7 +20,7 @@ const rowVariants = {
   show: (i) => ({ opacity: 1, x: 0, transition: { delay: i * 0.07, type: 'spring', stiffness: 260, damping: 24 } })
 }
 
-export default function Leaderboard({ players, isAdmin, onPlayAgain, playerId }) {
+export default function Leaderboard({ players, isAdmin, onPlayAgain, onSaveSession, sessionSaved, playerId }) {
   const confettiFired = useRef(false)
 
   const sorted = Object.entries(players)
@@ -230,26 +230,53 @@ export default function Leaderboard({ players, isAdmin, onPlayAgain, playerId })
           )}
         </div>
 
-        {/* Play Again */}
+        {/* Admin actions */}
         {isAdmin && (
-          <motion.button
+          <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={onPlayAgain}
-            style={{
-              width: '100%', padding: '16px',
-              borderRadius: 14, border: 'none',
-              background: 'linear-gradient(135deg, #FC8019, #E35D34)',
-              color: '#fff', fontSize: '1rem', fontWeight: 700,
-              fontFamily: 'inherit', cursor: 'pointer',
-              boxShadow: '0 8px 24px rgba(252,128,25,0.3)'
-            }}
+            style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
           >
-            ← Back to Sessions
-          </motion.button>
+            {onSaveSession && !sessionSaved && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={onSaveSession}
+                style={{
+                  width: '100%', padding: '16px',
+                  borderRadius: 14, border: 'none',
+                  background: 'linear-gradient(135deg, #FC8019, #E35D34)',
+                  color: '#fff', fontSize: '1rem', fontWeight: 700,
+                  fontFamily: 'inherit', cursor: 'pointer',
+                  boxShadow: '0 8px 24px rgba(252,128,25,0.3)'
+                }}
+              >
+                💾 Save Results
+              </motion.button>
+            )}
+            {sessionSaved && (
+              <div style={{
+                padding: '14px', borderRadius: 14, textAlign: 'center',
+                background: 'rgba(72,187,120,0.1)', border: '1px solid rgba(72,187,120,0.25)',
+                color: '#48BB78', fontWeight: 700, fontSize: '0.9rem'
+              }}>
+                ✓ Session Saved
+              </div>
+            )}
+            <button
+              onClick={onPlayAgain}
+              style={{
+                width: '100%', padding: '14px',
+                borderRadius: 14, border: '1.5px solid rgba(255,255,255,0.1)',
+                background: 'transparent', color: 'rgba(255,255,255,0.45)',
+                fontSize: '0.9rem', fontWeight: 600,
+                fontFamily: 'inherit', cursor: 'pointer'
+              }}
+            >
+              ← Back to Sessions
+            </button>
+          </motion.div>
         )}
       </div>
     </div>

@@ -16,7 +16,9 @@ function formatDate(ts) {
 export default function AdminSessions({ sessions, activeSessionId, onNewGame, onContinue, onRerun, onDelete }) {
   const [confirmDelete, setConfirmDelete] = useState(null)
 
-  const sessionList = Object.entries(sessions).sort(([a], [b]) => parseInt(b) - parseInt(a))
+  const sessionList = Object.entries(sessions)
+    .filter(([, s]) => s.saved)
+    .sort(([a], [b]) => parseInt(b) - parseInt(a))
   const activeSession = activeSessionId ? sessions[activeSessionId] : null
 
   const handleDelete = (id) => {

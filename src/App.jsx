@@ -188,13 +188,23 @@ export default function App() {
   // ── Session management handlers ────────────────────
 
   const handleNewGame = async () => {
+    // Clean up any unsaved sessions before starting fresh
+    Object.entries(allSessions).forEach(([id, s]) => {
+      if (!s.saved) remove(ref(db, `sessions/${id}`))
+    })
     const sessionId = Date.now().toString()
     await set(ref(db, `sessions/${sessionId}`), {
-      meta:    { name: genSessionName(), status: 'waiting', currentQuestion: 0, questionStartTime: 0, createdAt: Date.now() },
+      meta:    { name: genSessionName(), status: 'waiting', currentQuestion: 0, questionStartTime: 0, createdAt: Date.now(), saved: false },
       players: {}
     })
     await set(ref(db, 'activeSessionId'), sessionId)
     setAdminView('managing')
+  }
+
+  const handleSaveSession = async () => {
+    if (!activeSessionId) return
+    await update(ref(db, `sessions/${activeSessionId}/meta`), { saved: true })
+    setAdminView('sessions')
   }
 
   const handleContinueSession = async (sessionId) => {
@@ -203,10 +213,13 @@ export default function App() {
   }
 
   const handleRerunSession = async (sessionId) => {
+    Object.entries(allSessions).forEach(([id, s]) => {
+      if (!s.saved) remove(ref(db, `sessions/${id}`))
+    })
     const newSessionId = Date.now().toString()
     const baseName     = (allSessions[sessionId]?.name || 'Quiz').replace(/ \(Rerun.*\)$/, '')
     await set(ref(db, `sessions/${newSessionId}`), {
-      meta:    { name: `${baseName} (Rerun)`, status: 'waiting', currentQuestion: 0, questionStartTime: 0, createdAt: Date.now() },
+      meta:    { name: `${baseName} (Rerun)`, status: 'waiting', currentQuestion: 0, questionStartTime: 0, createdAt: Date.now(), saved: false },
       players: {}
     })
     await set(ref(db, 'activeSessionId'), newSessionId)
@@ -279,7 +292,7 @@ export default function App() {
           onBackToSessions={() => setAdminView('sessions')}
         />
       )
-      return <Leaderboard players={players} isAdmin onPlayAgain={() => setAdminView('sessions')} />
+      return <Leaderboard players={players} isAdmin onPlayAgain={() => setAdminView('sessions')} onSaveSession={handleSaveSession} sessionSaved={allSessions[activeSessionId]?.saved} />
     }
 
     if (userType === 'player') {
