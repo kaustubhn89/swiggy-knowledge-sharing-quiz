@@ -175,7 +175,6 @@ export default function QuestionScreen({ gameState, onAnswer }) {
                   opacity: isDimmed ? 0.28 : 1,
                   y: 0,
                   scale: isSelected ? [1, 0.93, 1.06, 1] : 1,
-                  filter: isDimmed ? 'blur(1.5px)' : 'blur(0px)'
                 }}
                 transition={
                   isSelected
@@ -197,10 +196,11 @@ export default function QuestionScreen({ gameState, onAnswer }) {
                   fontSize: '0.95rem', fontWeight: 600,
                   cursor: selected ? 'default' : 'pointer',
                   textAlign: 'left', lineHeight: 1.35,
+                  filter: isDimmed ? 'blur(1.5px)' : 'none',
                   boxShadow: isSelected
                     ? `0 0 28px ${ANS_GLOW[letter]}, 0 4px 16px rgba(0,0,0,0.3)`
                     : '0 4px 16px rgba(0,0,0,0.25)',
-                  transition: 'border-color 0.15s, box-shadow 0.2s'
+                  transition: 'filter 0.3s ease, border-color 0.15s, box-shadow 0.2s'
                 }}
               >
                 <motion.span
