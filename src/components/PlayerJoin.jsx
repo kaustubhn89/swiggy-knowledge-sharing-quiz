@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-export default function PlayerJoin({ onJoin, onBack }) {
+export default function PlayerJoin({ onJoin, onBack, noSession }) {
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -41,7 +41,9 @@ export default function PlayerJoin({ onJoin, onBack }) {
             👋
           </motion.div>
           <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#1A1A2A', marginBottom: 6 }}>What's your name?</h2>
-          <p style={{ color: '#6b7280', fontSize: '0.9rem', fontWeight: 500 }}>This will appear on the live leaderboard</p>
+          <p style={{ color: '#6b7280', fontSize: '0.9rem', fontWeight: 500 }}>
+            {noSession ? "Quiz hasn't started yet — enter your name to be ready" : 'This will appear on the live leaderboard'}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit}>

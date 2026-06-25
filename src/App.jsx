@@ -13,11 +13,19 @@ import Leaderboard from './components/Leaderboard'
 import AdminLogin from './components/AdminLogin'
 import AdminLobby from './components/AdminLobby'
 import AdminControl from './components/AdminControl'
+import AdminSessions from './components/AdminSessions'
 
 const ADMIN_PASSWORD = 'growisto@2026'
 
 function genId() {
   return Math.random().toString(36).slice(2, 11) + Date.now().toString(36)
+}
+
+function genSessionName() {
+  const now = new Date()
+  const d = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const t = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+  return `Quiz – ${d}, ${t}`
 }
 
 const pageVariants = {
@@ -27,39 +35,65 @@ const pageVariants = {
 }
 
 export default function App() {
-  const [userType, setUserType] = useState(null)
+  const [userType, setUserType]   = useState(null)
   const [adminAuth, setAdminAuth] = useState(false)
+  const [adminView, setAdminView] = useState('sessions') // 'sessions' | 'managing'
+
   const [playerId] = useState(() => {
     let id = localStorage.getItem('sqPlayerId')
     if (!id) { id = genId(); localStorage.setItem('sqPlayerId', id) }
     return id
   })
   const [playerName, setPlayerName] = useState(() => localStorage.getItem('sqPlayerName') || '')
+
+  const [activeSessionId, setActiveSessionId] = useState(null)
+  const [allSessions, setAllSessions]         = useState({})
   const [gameState, setGameState] = useState({ status: 'waiting', currentQuestion: 0, questionStartTime: 0 })
-  const [players, setPlayers] = useState({})
+  const [players, setPlayers]     = useState({})
   const [answerLocked, setAnswerLocked] = useState(false)
   const [lockedAnswer, setLockedAnswer] = useState(null)
-  const [revealData, setRevealData] = useState(null)
+  const [revealData, setRevealData]     = useState(null)
 
-  const prevQuestion = useRef(-1)
+  const prevQuestion     = useRef(-1)
   const revealTimeoutRef = useRef(null)
-  const playersRef = useRef(players)
-  const userTypeRef = useRef(userType)
-  playersRef.current = players
+  const playersRef       = useRef(players)
+  const userTypeRef      = useRef(userType)
+  playersRef.current  = players
   userTypeRef.current = userType
 
-  // Firebase listeners
+  // Listen to activeSessionId + all sessions
   useEffect(() => {
-    const unsubGame = onValue(ref(db, 'game'), snap => {
+    const unsubActive = onValue(ref(db, 'activeSessionId'), snap => {
+      setActiveSessionId(snap.val() || null)
+    })
+    const unsubAll = onValue(ref(db, 'sessions'), snap => {
+      const data = snap.val() || {}
+      const metas = {}
+      Object.entries(data).forEach(([id, s]) => {
+        if (s?.meta) metas[id] = { ...s.meta, playerCount: Object.keys(s.players || {}).length }
+      })
+      setAllSessions(metas)
+    })
+    return () => { unsubActive(); unsubAll() }
+  }, [])
+
+  // Listen to active session's game state + players
+  useEffect(() => {
+    if (!activeSessionId) {
+      setGameState({ status: 'waiting', currentQuestion: 0, questionStartTime: 0 })
+      setPlayers({})
+      return
+    }
+    const unsubGame = onValue(ref(db, `sessions/${activeSessionId}/meta`), snap => {
       setGameState(snap.val() || { status: 'waiting', currentQuestion: 0, questionStartTime: 0 })
     })
-    const unsubPlayers = onValue(ref(db, 'players'), snap => {
+    const unsubPlayers = onValue(ref(db, `sessions/${activeSessionId}/players`), snap => {
       setPlayers(snap.val() || {})
     })
     return () => { unsubGame(); unsubPlayers() }
-  }, [])
+  }, [activeSessionId])
 
-  // Detect Play Again reset
+  // Clear player name when new empty session appears
   useEffect(() => {
     if (userType === 'player' && playerName && gameState.status === 'waiting' && Object.keys(players).length === 0) {
       setPlayerName('')
@@ -67,7 +101,7 @@ export default function App() {
     }
   }, [players, gameState.status, userType, playerName])
 
-  // Question change → show answer reveal for players
+  // Question change → show answer reveal
   useEffect(() => {
     if (gameState.currentQuestion !== prevQuestion.current) {
       if (prevQuestion.current >= 0 && userTypeRef.current === 'player') {
@@ -75,9 +109,9 @@ export default function App() {
         if (prevAns) {
           setRevealData({
             questionIdx: prevQuestion.current,
-            answer: prevAns.answer,
-            score: prevAns.score || 0,
-            isCorrect: prevAns.answer === questions[prevQuestion.current].correct
+            answer:      prevAns.answer,
+            score:       prevAns.score || 0,
+            isCorrect:   prevAns.answer === questions[prevQuestion.current].correct
           })
           if (revealTimeoutRef.current) clearTimeout(revealTimeoutRef.current)
           revealTimeoutRef.current = setTimeout(() => {
@@ -92,7 +126,6 @@ export default function App() {
     }
   }, [gameState.currentQuestion, playerId])
 
-  // Clear reveal when game leaves question state
   useEffect(() => {
     if (gameState.status !== 'question') {
       setRevealData(null)
@@ -100,57 +133,89 @@ export default function App() {
     }
   }, [gameState.status])
 
-  // ── Handlers ──────────────────────────────────────
+  // ── Player handlers ────────────────────────────────
 
   const handlePlayerJoin = async (name) => {
+    if (!activeSessionId) return
     setPlayerName(name)
     localStorage.setItem('sqPlayerName', name)
-    await set(ref(db, `players/${playerId}`), { name, totalScore: 0, answers: {} })
+    await set(ref(db, `sessions/${activeSessionId}/players/${playerId}`), { name, totalScore: 0, answers: {} })
   }
 
-  const handleAnswer = async (answer, timeRemaining) => {
-    if (answerLocked) return
+  const handleAnswer = async (answer) => {
+    if (answerLocked || !activeSessionId) return
     setAnswerLocked(true)
     setLockedAnswer(answer)
 
-    const q = questions[gameState.currentQuestion]
+    const q       = questions[gameState.currentQuestion]
     const correct = answer === q.correct
-    const score = correct ? 3 : -1
+    const score   = correct ? 3 : -1
 
     const existingAnswers = playersRef.current[playerId]?.answers || {}
-    const newAnswers = { ...existingAnswers, [gameState.currentQuestion]: { answer, timestamp: Date.now(), score } }
-    const newTotal = Object.values(newAnswers).reduce((s, a) => s + (a.score || 0), 0)
+    const newAnswers      = { ...existingAnswers, [gameState.currentQuestion]: { answer, timestamp: Date.now(), score } }
+    const newTotal        = Object.values(newAnswers).reduce((s, a) => s + (a.score || 0), 0)
 
-    await update(ref(db, `players/${playerId}`), {
+    await update(ref(db, `sessions/${activeSessionId}/players/${playerId}`), {
       [`answers/${gameState.currentQuestion}`]: { answer, timestamp: Date.now(), score },
       totalScore: newTotal
     })
   }
 
+  // ── Admin game handlers ────────────────────────────
+
   const handleStartGame = async () => {
-    await set(ref(db, 'game'), { status: 'question', currentQuestion: 0, questionStartTime: Date.now() })
+    if (!activeSessionId) return
+    await update(ref(db, `sessions/${activeSessionId}/meta`), {
+      status: 'question', currentQuestion: 0, questionStartTime: Date.now()
+    })
   }
 
   const handleNextQuestion = async () => {
+    if (!activeSessionId) return
     const next = gameState.currentQuestion + 1
     if (next >= questions.length) {
-      await update(ref(db, 'game'), { status: 'leaderboard' })
+      await update(ref(db, `sessions/${activeSessionId}/meta`), { status: 'leaderboard' })
     } else {
-      await update(ref(db, 'game'), { currentQuestion: next, questionStartTime: Date.now() })
+      await update(ref(db, `sessions/${activeSessionId}/meta`), { currentQuestion: next, questionStartTime: Date.now() })
     }
   }
 
   const handleShowLeaderboard = async () => {
-    await update(ref(db, 'game'), { status: 'leaderboard' })
+    if (!activeSessionId) return
+    await update(ref(db, `sessions/${activeSessionId}/meta`), { status: 'leaderboard' })
   }
 
-  const handlePlayAgain = async () => {
-    await remove(ref(db, 'players'))
-    await set(ref(db, 'game'), { status: 'waiting', currentQuestion: 0, questionStartTime: 0 })
-    setAnswerLocked(false)
-    setLockedAnswer(null)
-    setRevealData(null)
-    prevQuestion.current = -1
+  // ── Session management handlers ────────────────────
+
+  const handleNewGame = async () => {
+    const sessionId = Date.now().toString()
+    await set(ref(db, `sessions/${sessionId}`), {
+      meta:    { name: genSessionName(), status: 'waiting', currentQuestion: 0, questionStartTime: 0, createdAt: Date.now() },
+      players: {}
+    })
+    await set(ref(db, 'activeSessionId'), sessionId)
+    setAdminView('managing')
+  }
+
+  const handleContinueSession = async (sessionId) => {
+    await set(ref(db, 'activeSessionId'), sessionId)
+    setAdminView('managing')
+  }
+
+  const handleRerunSession = async (sessionId) => {
+    const newSessionId = Date.now().toString()
+    const baseName     = (allSessions[sessionId]?.name || 'Quiz').replace(/ \(Rerun.*\)$/, '')
+    await set(ref(db, `sessions/${newSessionId}`), {
+      meta:    { name: `${baseName} (Rerun)`, status: 'waiting', currentQuestion: 0, questionStartTime: 0, createdAt: Date.now() },
+      players: {}
+    })
+    await set(ref(db, 'activeSessionId'), newSessionId)
+    setAdminView('managing')
+  }
+
+  const handleDeleteSession = async (sessionId) => {
+    await remove(ref(db, `sessions/${sessionId}`))
+    if (activeSessionId === sessionId) await remove(ref(db, 'activeSessionId'))
   }
 
   const handleAdminLogin = (pwd) => {
@@ -158,32 +223,52 @@ export default function App() {
     return false
   }
 
-  // ── Compute screen key for AnimatePresence ─────────
+  // ── Screen key ─────────────────────────────────────
   const getScreenKey = () => {
     if (!userType) return 'landing'
     if (userType === 'admin') {
-      if (!adminAuth) return 'admin-login'
-      if (gameState.status === 'waiting') return 'admin-lobby'
+      if (!adminAuth)                      return 'admin-login'
+      if (adminView === 'sessions')        return 'admin-sessions'
+      if (gameState.status === 'waiting')  return 'admin-lobby'
       if (gameState.status === 'question') return `admin-q-${gameState.currentQuestion}`
       return 'admin-leaderboard'
     }
     if (userType === 'player') {
-      if (!playerName) return 'player-join'
-      if (gameState.status === 'waiting') return 'player-waiting'
-      if (revealData) return `reveal-${revealData.questionIdx}`
-      if (gameState.status === 'question') return `player-q-${gameState.currentQuestion}`
+      if (!playerName)                                         return 'player-join'
+      if (!activeSessionId || gameState.status === 'waiting') return 'player-waiting'
+      if (revealData)                                          return `reveal-${revealData.questionIdx}`
+      if (gameState.status === 'question')                     return `player-q-${gameState.currentQuestion}`
       return 'leaderboard'
     }
     return 'landing'
   }
 
-  // ── Render current screen content ──────────────────
+  // ── Render ─────────────────────────────────────────
   const renderScreen = () => {
     if (!userType) return <Landing onJoinAsPlayer={() => setUserType('player')} onAdminLogin={() => setUserType('admin')} />
 
     if (userType === 'admin') {
       if (!adminAuth) return <AdminLogin onLogin={handleAdminLogin} onBack={() => setUserType(null)} />
-      if (gameState.status === 'waiting') return <AdminLobby players={players} onStartGame={handleStartGame} />
+
+      if (adminView === 'sessions') return (
+        <AdminSessions
+          sessions={allSessions}
+          activeSessionId={activeSessionId}
+          onNewGame={handleNewGame}
+          onContinue={handleContinueSession}
+          onRerun={handleRerunSession}
+          onDelete={handleDeleteSession}
+        />
+      )
+
+      if (gameState.status === 'waiting') return (
+        <AdminLobby
+          players={players}
+          onStartGame={handleStartGame}
+          sessionName={allSessions[activeSessionId]?.name || ''}
+          onBackToSessions={() => setAdminView('sessions')}
+        />
+      )
       if (gameState.status === 'question') return (
         <AdminControl
           gameState={gameState}
@@ -191,24 +276,22 @@ export default function App() {
           onNextQuestion={handleNextQuestion}
           onShowLeaderboard={handleShowLeaderboard}
           isLastQuestion={gameState.currentQuestion === questions.length - 1}
+          onBackToSessions={() => setAdminView('sessions')}
         />
       )
-      return <Leaderboard players={players} isAdmin onPlayAgain={handlePlayAgain} />
+      return <Leaderboard players={players} isAdmin onPlayAgain={() => setAdminView('sessions')} />
     }
 
     if (userType === 'player') {
-      if (!playerName) return <PlayerJoin onJoin={handlePlayerJoin} onBack={() => setUserType(null)} />
+      if (!playerName) return <PlayerJoin onJoin={handlePlayerJoin} onBack={() => setUserType(null)} noSession={!activeSessionId} />
 
-      if (gameState.status === 'waiting') return <WaitingRoom playerName={playerName} players={players} />
+      if (!activeSessionId || gameState.status === 'waiting') return <WaitingRoom playerName={playerName} players={players} />
 
       if (gameState.status === 'question') {
         if (revealData) return <AnswerReveal data={revealData} />
-
         const existingAnswer = players[playerId]?.answers?.[gameState.currentQuestion]
-        const isLocked = answerLocked || !!existingAnswer
-        if (isLocked) {
-          return <AnswerLocked answer={lockedAnswer || existingAnswer?.answer} currentQuestion={gameState.currentQuestion} />
-        }
+        const isLocked       = answerLocked || !!existingAnswer
+        if (isLocked) return <AnswerLocked answer={lockedAnswer || existingAnswer?.answer} currentQuestion={gameState.currentQuestion} />
         return <QuestionScreen gameState={gameState} onAnswer={handleAnswer} />
       }
 

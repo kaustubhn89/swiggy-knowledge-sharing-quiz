@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 const AVATAR_COLORS = ['#FC8019','#367588','#7B5EA7','#48BB78','#E35D34','#4299e1']
 
-export default function AdminLobby({ players, onStartGame }) {
+export default function AdminLobby({ players, onStartGame, sessionName, onBackToSessions }) {
   const playerList = Object.values(players)
 
   return (
@@ -17,12 +17,25 @@ export default function AdminLobby({ players, onStartGame }) {
         animate={{ opacity: 1, y: 0 }}
         style={{ width: '100%', maxWidth: 500 }}
       >
-        {/* Header */}
+        {/* Back + Header */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <button
+            onClick={onBackToSessions}
+            style={{
+              background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)',
+              fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit',
+              cursor: 'pointer', marginBottom: 20, display: 'inline-flex', alignItems: 'center', gap: 5
+            }}
+          >
+            ← Sessions
+          </button>
           <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🎛️</div>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', marginBottom: 6 }}>Admin Lobby</h2>
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', marginBottom: 4 }}>Lobby</h2>
+          {sessionName && (
+            <div style={{ color: '#FC8019', fontSize: '0.82rem', fontWeight: 700, marginBottom: 4 }}>{sessionName}</div>
+          )}
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>
-            Share your screen URL and wait for players to join
+            Share the quiz URL and wait for players to join
           </p>
         </div>
 

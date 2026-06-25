@@ -5,7 +5,7 @@ import { questions } from '../questions'
 const ANS_COLORS = { A: '#367588', B: '#1C4A57', C: '#FC8019', D: '#7B5EA7' }
 const AVATAR_COLORS = ['#FC8019','#367588','#7B5EA7','#48BB78','#E35D34','#4299e1']
 
-export default function AdminControl({ gameState, players, onNextQuestion, onShowLeaderboard, isLastQuestion }) {
+export default function AdminControl({ gameState, players, onNextQuestion, onShowLeaderboard, isLastQuestion, onBackToSessions }) {
   const [timeRemaining, setTimeRemaining] = useState(0)
   const rafRef = useRef()
   const q = questions[gameState.currentQuestion]
@@ -50,6 +50,17 @@ export default function AdminControl({ gameState, players, onNextQuestion, onSho
       >
         {/* Title */}
         <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <button
+            onClick={onBackToSessions}
+            style={{
+              background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)',
+              fontSize: '0.75rem', fontWeight: 600, fontFamily: 'inherit',
+              cursor: 'pointer', marginBottom: 10, padding: 0,
+              display: 'flex', alignItems: 'center', gap: 4
+            }}
+          >
+            ← Sessions
+          </button>
           <div style={{ fontSize: '1.2rem', marginBottom: 6 }}>⚡</div>
           <h3 style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: 2 }}>Swiggy KS Quiz</h3>
           <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem' }}>Admin Control Panel</p>

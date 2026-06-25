@@ -248,7 +248,7 @@ export default function Leaderboard({ players, isAdmin, onPlayAgain, playerId })
               boxShadow: '0 8px 24px rgba(252,128,25,0.3)'
             }}
           >
-            🔄 Play Again
+            ← Back to Sessions
           </motion.button>
         )}
       </div>
