@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { questions } from '../questions'
 
 const STATUS_CFG = {
   waiting:     { label: 'Waiting',     color: '#FC8019', bg: 'rgba(252,128,25,0.15)' },
@@ -113,7 +114,7 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
                 </div>
                 <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', marginTop: 2 }}>
                   {activeSession.status === 'question'
-                    ? `Q${(activeSession.currentQuestion || 0) + 1}/8 in progress · ${activeSession.playerCount || 0} players`
+                    ? `Q${(activeSession.currentQuestion || 0) + 1}/${questions.length} in progress · ${activeSession.playerCount || 0} players`
                     : `${activeSession.playerCount || 0} players · ${STATUS_CFG[activeSession.status]?.label}`}
                 </div>
               </div>
@@ -213,7 +214,7 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
                       )}
                     </div>
                     <div style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.72rem' }}>
-                      {s.status === 'question' ? `Q${(s.currentQuestion || 0) + 1}/8 in progress` : formatDate(id)}
+                      {s.status === 'question' ? `Q${(s.currentQuestion || 0) + 1}/${questions.length} in progress` : formatDate(id)}
                     </div>
                   </div>
 

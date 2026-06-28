@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ref, onValue, set, update, remove } from 'firebase/database'
 import { db } from './firebase'
@@ -95,10 +95,11 @@ export default function App() {
     return () => { unsubGame(); unsubPlayers() }
   }, [activeSessionId])
 
-  // Clear player name when new empty session appears
+  // Clear player name + rules flag when new empty session appears
   useEffect(() => {
     if (userType === 'player' && playerName && gameState.status === 'waiting' && Object.keys(players).length === 0) {
       setPlayerName('')
+      setRulesAcknowledged(false)
       localStorage.removeItem('sqPlayerName')
     }
   }, [players, gameState.status, userType, playerName])
@@ -165,7 +166,7 @@ export default function App() {
     })
   }
 
-  const handleTimeout = async () => {
+  const handleTimeout = useCallback(async () => {
     if (answerLocked || !activeSessionId) return
     setAnswerLocked(true)
 
@@ -180,7 +181,7 @@ export default function App() {
       [`answers/${qIdx}`]: { answer: null, timestamp: Date.now(), score: -1 },
       totalScore: newTotal
     })
-  }
+  }, [answerLocked, activeSessionId, gameState.currentQuestion, playerId])
 
   // ── Admin game handlers ────────────────────────────
 

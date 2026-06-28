@@ -121,10 +121,8 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
     if (selected || lockedRef.current) return
     lockedRef.current = true
     setSelected(letter)
-    const elapsed    = (Date.now() - gameState.questionStartTime) / 1000
-    const remaining  = Math.max(0, q.time - elapsed)
-    onAnswer(letter, remaining)
-  }, [selected, gameState.questionStartTime, q.time, onAnswer])
+    onAnswer(letter)
+  }, [selected, onAnswer])
 
   const diff = DIFF_COLORS[q.difficulty] || DIFF_COLORS.Easy
 
