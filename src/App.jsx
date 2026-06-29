@@ -139,7 +139,7 @@ export default function App() {
   // ── Player handlers ────────────────────────────────
 
   const handlePlayerJoin = async (name) => {
-    if (!activeSessionId) return
+    if (!activeSessionId || gameState.status === 'leaderboard') return
     setPlayerName(name)
     localStorage.setItem('sqPlayerName', name)
     await set(ref(db, `sessions/${activeSessionId}/players/${playerId}`), { name, totalScore: 0, answers: {} })
@@ -225,6 +225,12 @@ export default function App() {
   const handleSaveSession = async () => {
     if (!activeSessionId) return
     await update(ref(db, `sessions/${activeSessionId}/meta`), { saved: true })
+    await remove(ref(db, 'activeSessionId'))
+    setAdminView('sessions')
+  }
+
+  const handleAdminLeaveLeaderboard = async () => {
+    await remove(ref(db, 'activeSessionId'))
     setAdminView('sessions')
   }
 
@@ -268,12 +274,14 @@ export default function App() {
       return 'admin-leaderboard'
     }
     if (userType === 'player') {
-      if (!rulesAcknowledged && !playerName)                   return 'player-rules'
-      if (!playerName)                                         return 'player-join'
-      if (!activeSessionId || gameState.status === 'waiting') return 'player-waiting'
-      if (revealData)                                          return `reveal-${revealData.questionIdx}`
-      if (gameState.status === 'question')                     return `player-q-${gameState.currentQuestion}`
-      return 'leaderboard'
+      if (!rulesAcknowledged && !playerName)                              return 'player-rules'
+      if (!playerName)                                                     return 'player-join'
+      if (!activeSessionId || gameState.status === 'waiting')             return 'player-waiting'
+      if (gameState.status === 'leaderboard' && !players[playerId])       return 'player-waiting-post'
+      if (gameState.status === 'leaderboard')                             return 'leaderboard'
+      if (revealData)                                                      return `reveal-${revealData.questionIdx}`
+      if (gameState.status === 'question')                                return `player-q-${gameState.currentQuestion}`
+      return 'player-waiting'
     }
     return 'landing'
   }
@@ -314,14 +322,20 @@ export default function App() {
           onBackToSessions={() => setAdminView('sessions')}
         />
       )
-      return <Leaderboard players={players} isAdmin onPlayAgain={() => setAdminView('sessions')} onSaveSession={handleSaveSession} sessionSaved={allSessions[activeSessionId]?.saved} />
+      return <Leaderboard players={players} isAdmin onPlayAgain={handleAdminLeaveLeaderboard} onSaveSession={handleSaveSession} sessionSaved={allSessions[activeSessionId]?.saved} />
     }
 
     if (userType === 'player') {
       if (!rulesAcknowledged && !playerName) return <RulesScreen onReady={() => setRulesAcknowledged(true)} />
-      if (!playerName) return <PlayerJoin onJoin={handlePlayerJoin} onBack={() => { setUserType(null); setRulesAcknowledged(false) }} noSession={!activeSessionId} />
+      if (!playerName) return <PlayerJoin onJoin={handlePlayerJoin} onBack={() => { setUserType(null); setRulesAcknowledged(false) }} noSession={!activeSessionId || gameState.status === 'leaderboard'} />
 
       if (!activeSessionId || gameState.status === 'waiting') return <WaitingRoom playerName={playerName} players={players} />
+
+      if (gameState.status === 'leaderboard') {
+        // Only show leaderboard to players who actually participated in this game
+        if (players[playerId]) return <Leaderboard players={players} isAdmin={false} playerId={playerId} />
+        return <WaitingRoom playerName={playerName} players={{}} />
+      }
 
       if (gameState.status === 'question') {
         if (revealData) return <AnswerReveal data={revealData} />
@@ -331,7 +345,7 @@ export default function App() {
         return <QuestionScreen gameState={gameState} onAnswer={handleAnswer} onTimeout={handleTimeout} />
       }
 
-      return <Leaderboard players={players} isAdmin={false} playerId={playerId} />
+      return <WaitingRoom playerName={playerName} players={players} />
     }
 
     return <Landing onJoinAsPlayer={() => setUserType('player')} onAdminLogin={() => setUserType('admin')} />
