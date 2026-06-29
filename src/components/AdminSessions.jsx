@@ -118,22 +118,40 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
                     : `${activeSession.playerCount || 0} players · ${STATUS_CFG[activeSession.status]?.label}`}
                 </div>
               </div>
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => onContinue(activeSessionId)}
-                style={{
-                  padding: '10px 20px', borderRadius: 10, border: 'none',
-                  background: 'linear-gradient(135deg, #FC8019, #E35D34)',
-                  color: '#fff', fontWeight: 700, fontSize: '0.9rem',
-                  fontFamily: 'inherit', cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(252,128,25,0.3)'
-                }}
-              >
-                {activeSession.status === 'waiting'    ? '🚪 Open Lobby' :
-                 activeSession.status === 'question'   ? '▶ Resume'       :
-                                                         '🏆 View Results'}
-              </motion.button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => onContinue(activeSessionId)}
+                  style={{
+                    padding: '10px 20px', borderRadius: 10, border: 'none',
+                    background: 'linear-gradient(135deg, #FC8019, #E35D34)',
+                    color: '#fff', fontWeight: 700, fontSize: '0.9rem',
+                    fontFamily: 'inherit', cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(252,128,25,0.3)'
+                  }}
+                >
+                  {activeSession.status === 'waiting'    ? '🚪 Open Lobby' :
+                   activeSession.status === 'question'   ? '▶ Resume'       :
+                                                           '🏆 View Results'}
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => handleDelete(activeSessionId)}
+                  style={{
+                    padding: '10px 14px', borderRadius: 10,
+                    border: `1.5px solid ${confirmDelete === activeSessionId ? 'rgba(245,101,101,0.6)' : 'rgba(255,255,255,0.1)'}`,
+                    background: confirmDelete === activeSessionId ? 'rgba(245,101,101,0.12)' : 'transparent',
+                    color: confirmDelete === activeSessionId ? '#F56565' : 'rgba(255,255,255,0.4)',
+                    fontWeight: 700, fontSize: '0.85rem',
+                    fontFamily: 'inherit', cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {confirmDelete === activeSessionId ? 'Confirm?' : '🗑'}
+                </motion.button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
