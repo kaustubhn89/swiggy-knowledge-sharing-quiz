@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { questions } from '../questions'
+import { T, APP_NAME, tint } from '../brand'
 
 const STATUS_CFG = {
-  waiting:     { label: 'Waiting',     color: '#FC8019', bg: 'rgba(252,128,25,0.15)' },
-  question:    { label: 'In Progress', color: '#48BB78', bg: 'rgba(72,187,120,0.15)' },
-  leaderboard: { label: 'Completed',   color: '#4299e1', bg: 'rgba(66,153,225,0.15)' }
+  waiting:     { label: 'Waiting',     color: T.orange, bg: tint(T.orange, 0.12) },
+  question:    { label: 'In Progress', color: T.green,  bg: tint(T.green, 0.12) },
+  leaderboard: { label: 'Completed',   color: T.blue,   bg: tint(T.blue, 0.12) }
 }
 
 function formatDate(ts) {
@@ -53,8 +54,15 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
     }
   }
 
+  const primaryBtn = {
+    borderRadius: 12, border: 'none',
+    background: T.gradPrimary, color: '#fff',
+    fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
+    boxShadow: T.shadowBtn
+  }
+
   return (
-    <div style={{ minHeight: '100vh', background: '#1A1A2A', padding: '28px 20px' }}>
+    <div style={{ minHeight: '100vh', background: T.bg, padding: '28px 20px' }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
 
         {/* Header */}
@@ -62,10 +70,10 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
               <span style={{ fontSize: '1.5rem' }}>⚡</span>
-              <h2 style={{ color: '#fff', fontWeight: 800, fontSize: '1.5rem' }}>Quiz Sessions</h2>
+              <h2 style={{ color: T.ink, fontWeight: 800, fontSize: '1.5rem' }}>Quiz Sessions</h2>
             </div>
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.85rem' }}>
-              {sessionList.length} session{sessionList.length !== 1 ? 's' : ''} · Admin Control
+            <p style={{ color: T.ink3, fontSize: '0.85rem' }}>
+              {sessionList.length} session{sessionList.length !== 1 ? 's' : ''} · {APP_NAME}
             </p>
           </div>
           <motion.button
@@ -73,11 +81,8 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
             whileTap={{ scale: 0.96 }}
             onClick={openNameModal}
             style={{
-              padding: '12px 22px', borderRadius: 12, border: 'none',
-              background: 'linear-gradient(135deg, #FC8019, #E35D34)',
-              color: '#fff', fontSize: '0.95rem', fontWeight: 700,
-              fontFamily: 'inherit', cursor: 'pointer',
-              boxShadow: '0 6px 20px rgba(252,128,25,0.35)',
+              ...primaryBtn,
+              padding: '12px 22px', fontSize: '0.95rem',
               display: 'flex', alignItems: 'center', gap: 7
             }}
           >
@@ -94,8 +99,8 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               style={{
-                background: 'rgba(252,128,25,0.07)',
-                border: '1.5px solid rgba(252,128,25,0.3)',
+                background: tint(T.teal, 0.07),
+                border: `1.5px solid ${tint(T.teal, 0.30)}`,
                 borderRadius: 16, padding: '16px 20px', marginBottom: 20,
                 display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap'
               }}
@@ -103,16 +108,16 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
               <motion.div
                 animate={{ opacity: [1, 0.3, 1] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
-                style={{ width: 8, height: 8, borderRadius: '50%', background: '#FC8019', flexShrink: 0 }}
+                style={{ width: 8, height: 8, borderRadius: '50%', background: T.orange, flexShrink: 0 }}
               />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ color: 'rgba(252,128,25,0.65)', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>
+                <div style={{ color: T.orange, fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>
                   Active Session
                 </div>
-                <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ color: T.ink, fontWeight: 700, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {activeSession.name}
                 </div>
-                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', marginTop: 2 }}>
+                <div style={{ color: T.ink3, fontSize: '0.75rem', marginTop: 2 }}>
                   {activeSession.status === 'question'
                     ? `Q${(activeSession.currentQuestion || 0) + 1}/${questions.length} in progress · ${activeSession.playerCount || 0} players`
                     : `${activeSession.playerCount || 0} players · ${STATUS_CFG[activeSession.status]?.label}`}
@@ -123,13 +128,7 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => onContinue(activeSessionId)}
-                  style={{
-                    padding: '10px 20px', borderRadius: 10, border: 'none',
-                    background: 'linear-gradient(135deg, #FC8019, #E35D34)',
-                    color: '#fff', fontWeight: 700, fontSize: '0.9rem',
-                    fontFamily: 'inherit', cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(252,128,25,0.3)'
-                  }}
+                  style={{ ...primaryBtn, borderRadius: 10, padding: '10px 20px', fontSize: '0.9rem' }}
                 >
                   {activeSession.status === 'waiting'    ? '🚪 Open Lobby' :
                    activeSession.status === 'question'   ? '▶ Resume'       :
@@ -141,9 +140,9 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
                   onClick={() => handleDelete(activeSessionId)}
                   style={{
                     padding: '10px 14px', borderRadius: 10,
-                    border: `1.5px solid ${confirmDelete === activeSessionId ? 'rgba(245,101,101,0.6)' : 'rgba(255,255,255,0.1)'}`,
-                    background: confirmDelete === activeSessionId ? 'rgba(245,101,101,0.12)' : 'transparent',
-                    color: confirmDelete === activeSessionId ? '#F56565' : 'rgba(255,255,255,0.4)',
+                    border: `1.5px solid ${confirmDelete === activeSessionId ? tint(T.red, 0.6) : T.line2}`,
+                    background: confirmDelete === activeSessionId ? tint(T.red, 0.10) : T.card,
+                    color: confirmDelete === activeSessionId ? T.red : T.ink3,
                     fontWeight: 700, fontSize: '0.85rem',
                     fontFamily: 'inherit', cursor: 'pointer',
                     transition: 'all 0.2s ease'
@@ -163,46 +162,42 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
             animate={{ opacity: 1, y: 0 }}
             style={{
               textAlign: 'center', padding: '64px 20px',
-              background: '#252535', borderRadius: 20,
-              border: '1.5px solid rgba(255,255,255,0.06)'
+              background: T.card, borderRadius: 20,
+              border: `1.5px solid ${T.line}`,
+              boxShadow: T.shadowCard
             }}
           >
             <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>🎛️</div>
-            <p style={{ color: '#fff', fontSize: '1.05rem', fontWeight: 700, marginBottom: 8 }}>No sessions yet</p>
-            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem', marginBottom: 24 }}>
+            <p style={{ color: T.ink, fontSize: '1.05rem', fontWeight: 700, marginBottom: 8 }}>No sessions yet</p>
+            <p style={{ color: T.ink3, fontSize: '0.85rem', marginBottom: 24 }}>
               Create your first quiz to get started
             </p>
             <motion.button
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
               onClick={openNameModal}
-              style={{
-                padding: '14px 32px', borderRadius: 12, border: 'none',
-                background: 'linear-gradient(135deg, #FC8019, #E35D34)',
-                color: '#fff', fontSize: '1rem', fontWeight: 700,
-                fontFamily: 'inherit', cursor: 'pointer'
-              }}
+              style={{ ...primaryBtn, padding: '14px 32px', fontSize: '1rem' }}
             >
               ＋ Create First Quiz
             </motion.button>
           </motion.div>
         ) : (
-          <div style={{ background: '#252535', borderRadius: 20, overflow: 'hidden', border: '1.5px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ background: T.card, borderRadius: 20, overflow: 'hidden', border: `1.5px solid ${T.line}`, boxShadow: T.shadowCard }}>
             {/* Table header */}
             <div style={{
               display: 'grid', gridTemplateColumns: '1fr 110px 54px 1fr',
               padding: '11px 20px',
-              background: 'rgba(255,255,255,0.02)',
-              borderBottom: '1px solid rgba(255,255,255,0.06)'
+              background: T.fill,
+              borderBottom: `1px solid ${T.line}`
             }}>
               {['Session', 'Status', 'Players', 'Actions'].map(h => (
-                <span key={h} style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</span>
+                <span key={h} style={{ color: T.ink3, fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</span>
               ))}
             </div>
 
             {sessionList.map(([id, s], i) => {
-              const isActive = id === activeSessionId
-              const cfg      = STATUS_CFG[s.status] || STATUS_CFG.waiting
+              const isActive  = id === activeSessionId
+              const cfg       = STATUS_CFG[s.status] || STATUS_CFG.waiting
               const isConfirm = confirmDelete === id
 
               return (
@@ -214,24 +209,24 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
                   style={{
                     display: 'grid', gridTemplateColumns: '1fr 110px 54px 1fr',
                     padding: '14px 20px', alignItems: 'center',
-                    borderBottom: i < sessionList.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                    background: isActive ? 'rgba(252,128,25,0.04)' : 'transparent',
-                    borderLeft: isActive ? '3px solid #FC8019' : '3px solid transparent'
+                    borderBottom: i < sessionList.length - 1 ? `1px solid ${T.line}` : 'none',
+                    background: isActive ? tint(T.teal, 0.05) : 'transparent',
+                    borderLeft: isActive ? `3px solid ${T.orange}` : '3px solid transparent'
                   }}
                 >
                   {/* Name + date */}
                   <div style={{ paddingRight: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                      <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: T.ink, fontWeight: 600, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {s.name}
                       </span>
                       {isActive && (
-                        <span style={{ background: 'rgba(252,128,25,0.2)', color: '#FC8019', fontSize: '0.6rem', fontWeight: 800, padding: '2px 6px', borderRadius: 6, flexShrink: 0 }}>
+                        <span style={{ background: tint(T.orange, 0.15), color: T.orange, fontSize: '0.6rem', fontWeight: 800, padding: '2px 6px', borderRadius: 6, flexShrink: 0 }}>
                           LIVE
                         </span>
                       )}
                     </div>
-                    <div style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.72rem' }}>
+                    <div style={{ color: T.ink3, fontSize: '0.72rem' }}>
                       {s.status === 'question' ? `Q${(s.currentQuestion || 0) + 1}/${questions.length} in progress` : formatDate(id)}
                     </div>
                   </div>
@@ -247,7 +242,7 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
                   </span>
 
                   {/* Players */}
-                  <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 600, fontSize: '0.9rem' }}>
+                  <span style={{ color: T.ink2, fontWeight: 600, fontSize: '0.9rem' }}>
                     {s.playerCount || 0}
                   </span>
 
@@ -257,8 +252,8 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
                       onClick={() => onContinue(id)}
                       style={{
                         padding: '6px 11px', borderRadius: 8, border: 'none',
-                        background: isActive ? 'rgba(252,128,25,0.18)' : 'rgba(255,255,255,0.07)',
-                        color: isActive ? '#FC8019' : 'rgba(255,255,255,0.55)',
+                        background: isActive ? tint(T.orange, 0.15) : T.fill2,
+                        color: isActive ? T.orange : T.ink2,
                         fontSize: '0.73rem', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer'
                       }}
                     >
@@ -268,7 +263,7 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
                       onClick={() => onRerun(id)}
                       style={{
                         padding: '6px 11px', borderRadius: 8, border: 'none',
-                        background: 'rgba(72,187,120,0.1)', color: '#48BB78',
+                        background: tint(T.green, 0.10), color: T.green,
                         fontSize: '0.73rem', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer'
                       }}
                     >
@@ -278,8 +273,8 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
                       onClick={() => handleDelete(id)}
                       style={{
                         padding: '6px 11px', borderRadius: 8, border: 'none',
-                        background: isConfirm ? 'rgba(245,101,101,0.25)' : 'rgba(245,101,101,0.08)',
-                        color: '#F56565',
+                        background: isConfirm ? tint(T.red, 0.20) : tint(T.red, 0.08),
+                        color: T.red,
                         fontSize: '0.73rem', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
                         transition: 'background 0.2s'
                       }}
@@ -294,7 +289,7 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
         )}
 
         {/* Footer hint */}
-        <p style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.75rem', textAlign: 'center', marginTop: 20 }}>
+        <p style={{ color: T.ink4, fontSize: '0.75rem', textAlign: 'center', marginTop: 20 }}>
           Sessions are stored in Firebase · Delete removes permanently
         </p>
       </div>
@@ -308,7 +303,7 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
             exit={{ opacity: 0 }}
             style={{
               position: 'fixed', inset: 0,
-              background: 'rgba(0,0,0,0.72)',
+              background: 'rgba(28,74,87,0.45)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               zIndex: 200, padding: 20
             }}
@@ -320,16 +315,16 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 24 }}
               style={{
-                background: '#252535', borderRadius: 20, padding: '28px 24px',
+                background: T.card, borderRadius: 20, padding: '28px 24px',
                 width: '100%', maxWidth: 400,
-                border: '1.5px solid rgba(255,255,255,0.1)',
-                boxShadow: '0 24px 60px rgba(0,0,0,0.5)'
+                border: `1.5px solid ${T.line}`,
+                boxShadow: T.shadowModal
               }}
             >
-              <h3 style={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem', marginBottom: 6 }}>
+              <h3 style={{ color: T.ink, fontWeight: 800, fontSize: '1.15rem', marginBottom: 6 }}>
                 Name this Quiz
               </h3>
-              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem', marginBottom: 20 }}>
+              <p style={{ color: T.ink3, fontSize: '0.82rem', marginBottom: 20 }}>
                 Give it a name so you can find, save, and rerun it later.
               </p>
               <input
@@ -339,16 +334,16 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
                 onKeyDown={e => e.key === 'Enter' && newQuizName.trim() && handleStartNewQuiz()}
                 maxLength={50}
                 autoFocus
-                placeholder="e.g. Instamart Ads – Round 1"
+                placeholder={`e.g. ${APP_NAME} – Round 1`}
                 style={{
                   width: '100%', padding: '13px 16px',
-                  borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.12)',
-                  background: 'rgba(255,255,255,0.05)', color: '#fff',
+                  borderRadius: 10, border: `1.5px solid ${T.line2}`,
+                  background: T.fill, color: T.ink,
                   fontSize: '0.95rem', fontFamily: 'inherit', fontWeight: 600,
                   outline: 'none', marginBottom: 14, boxSizing: 'border-box'
                 }}
-                onFocus={e => e.target.style.borderColor = 'rgba(252,128,25,0.5)'}
-                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
+                onFocus={e => e.target.style.borderColor = T.teal}
+                onBlur={e => e.target.style.borderColor = T.line2}
               />
               <button
                 onClick={handleStartNewQuiz}
@@ -356,8 +351,8 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
                 style={{
                   width: '100%', padding: '13px',
                   borderRadius: 10, border: 'none',
-                  background: newQuizName.trim() ? 'linear-gradient(135deg, #FC8019, #E35D34)' : 'rgba(255,255,255,0.08)',
-                  color: newQuizName.trim() ? '#fff' : 'rgba(255,255,255,0.25)',
+                  background: newQuizName.trim() ? T.gradPrimary : T.disabled,
+                  color: newQuizName.trim() ? '#fff' : T.ink4,
                   fontSize: '0.95rem', fontWeight: 700,
                   fontFamily: 'inherit', cursor: newQuizName.trim() ? 'pointer' : 'not-allowed',
                   marginBottom: 8, transition: 'background 0.2s, color 0.2s'
@@ -370,7 +365,7 @@ export default function AdminSessions({ sessions, activeSessionId, onNewGame, on
                 style={{
                   width: '100%', padding: '10px', borderRadius: 10,
                   border: 'none', background: 'transparent',
-                  color: 'rgba(255,255,255,0.28)', fontSize: '0.85rem',
+                  color: T.ink3, fontSize: '0.85rem',
                   fontFamily: 'inherit', cursor: 'pointer'
                 }}
               >

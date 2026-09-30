@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { T } from '../brand'
 
 export default function AdminLogin({ onLogin, onBack }) {
   const [password, setPassword] = useState('')
@@ -16,10 +17,12 @@ export default function AdminLogin({ onLogin, onBack }) {
     }, 400)
   }
 
+  const ready = !!password && !loading
+
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #14141F 0%, #1C4A57 100%)',
+      background: T.bg,
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
     }}>
       <motion.div
@@ -27,17 +30,17 @@ export default function AdminLogin({ onLogin, onBack }) {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 260, damping: 22 }}
         style={{
-          background: '#252535',
+          background: T.card,
           borderRadius: 24, padding: '40px 32px',
           width: '100%', maxWidth: 400,
-          border: '1.5px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.5)'
+          border: `1px solid ${T.line}`,
+          boxShadow: T.shadowModal
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ fontSize: '3rem', marginBottom: 12 }}>🔐</div>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', marginBottom: 6 }}>Admin Login</h2>
-          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.9rem' }}>Enter the host password to continue</p>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: T.ink, marginBottom: 6 }}>Admin Login</h2>
+          <p style={{ color: T.ink3, fontSize: '0.9rem' }}>Enter the host password to continue</p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -51,20 +54,20 @@ export default function AdminLogin({ onLogin, onBack }) {
               style={{
                 width: '100%', padding: '16px 20px',
                 borderRadius: 12,
-                border: `2px solid ${error ? '#F56565' : 'rgba(255,255,255,0.1)'}`,
+                border: `2px solid ${error ? T.red : T.line2}`,
                 fontSize: '1rem', fontFamily: 'inherit', fontWeight: 600,
-                color: '#fff', background: 'rgba(255,255,255,0.06)',
+                color: T.ink, background: T.fill,
                 outline: 'none', transition: 'border-color 0.2s'
               }}
-              onFocus={e => !error && (e.target.style.borderColor = 'rgba(252,128,25,0.5)')}
-              onBlur={e => !error && (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+              onFocus={e => !error && (e.target.style.borderColor = T.teal)}
+              onBlur={e => !error && (e.target.style.borderColor = T.line2)}
             />
           </div>
 
           <AnimatePresence>
             {error && (
               <motion.p initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                style={{ color: '#F56565', fontSize: '0.85rem', textAlign: 'center', marginBottom: 12, fontWeight: 600 }}
+                style={{ color: T.red, fontSize: '0.85rem', textAlign: 'center', marginBottom: 12, fontWeight: 600 }}
               >
                 ✗ Incorrect password. Try again.
               </motion.p>
@@ -73,19 +76,19 @@ export default function AdminLogin({ onLogin, onBack }) {
 
           <motion.button
             type="submit"
-            disabled={!password || loading}
-            whileHover={password && !loading ? { scale: 1.02 } : {}}
-            whileTap={password && !loading ? { scale: 0.97 } : {}}
+            disabled={!ready}
+            whileHover={ready ? { scale: 1.02 } : {}}
+            whileTap={ready ? { scale: 0.97 } : {}}
             style={{
               width: '100%', padding: '16px',
               borderRadius: 12, border: 'none',
-              background: password && !loading ? 'linear-gradient(135deg, #FC8019, #E35D34)' : 'rgba(255,255,255,0.08)',
-              color: password && !loading ? '#fff' : 'rgba(255,255,255,0.3)',
+              background: ready ? T.gradPrimary : T.disabled,
+              color: ready ? '#fff' : T.ink4,
               fontSize: '1rem', fontWeight: 700, fontFamily: 'inherit',
-              cursor: password && !loading ? 'pointer' : 'not-allowed',
+              cursor: ready ? 'pointer' : 'not-allowed',
               marginBottom: 12,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              boxShadow: password && !loading ? '0 8px 24px rgba(252,128,25,0.3)' : 'none',
+              boxShadow: ready ? T.shadowBtn : 'none',
               transition: 'all 0.2s'
             }}
           >
@@ -94,8 +97,8 @@ export default function AdminLogin({ onLogin, onBack }) {
 
           <button type="button" onClick={onBack} style={{
             width: '100%', padding: '12px',
-            borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.1)',
-            background: 'transparent', color: 'rgba(255,255,255,0.4)',
+            borderRadius: 12, border: `1.5px solid ${T.line2}`,
+            background: 'transparent', color: T.ink3,
             fontSize: '0.9rem', fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer'
           }}>
             ← Back

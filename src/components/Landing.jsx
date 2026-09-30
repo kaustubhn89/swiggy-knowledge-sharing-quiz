@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { T, APP_NAME, APP_SUBTITLE, ORG, tint } from '../brand'
 
 const floatVariants = {
   animate: (i) => ({
@@ -10,17 +11,17 @@ const floatVariants = {
 }
 
 const blobs = [
-  { w: 400, h: 400, left: '-10%', top: '-15%', bg: 'rgba(252,128,25,0.12)', custom: 0 },
-  { w: 280, h: 280, left: '60%', top: '10%', bg: 'rgba(54,117,136,0.1)', custom: 1 },
-  { w: 320, h: 320, left: '5%', top: '60%', bg: 'rgba(252,128,25,0.08)', custom: 2 },
-  { w: 200, h: 200, left: '75%', top: '65%', bg: 'rgba(123,94,167,0.1)', custom: 3 },
+  { w: 420, h: 420, left: '-12%', top: '-18%', bg: tint(T.teal, 0.10),   custom: 0 },
+  { w: 300, h: 300, left: '62%',  top: '8%',   bg: tint(T.orange, 0.09), custom: 1 },
+  { w: 340, h: 340, left: '4%',   top: '58%',  bg: tint(T.powder, 0.45), custom: 2 },
+  { w: 220, h: 220, left: '74%',  top: '64%',  bg: tint(T.purple, 0.08), custom: 3 },
 ]
 
 export default function Landing({ onJoinAsPlayer, onAdminLogin }) {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #FC8019 0%, #E35D34 30%, #1C4A57 70%, #0f2d38 100%)',
+      background: T.bg,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -41,33 +42,28 @@ export default function Landing({ onJoinAsPlayer, onAdminLogin }) {
       ))}
 
       <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 560, textAlign: 'center' }}>
-        {/* Logo */}
+        {/* Logo tile */}
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
           style={{
             width: 80, height: 80, borderRadius: 24,
-            background: 'rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(10px)',
-            border: '1.5px solid rgba(255,255,255,0.25)',
+            background: T.gradPrimary,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 24px', fontSize: '2.2rem',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+            boxShadow: T.shadowBtn
           }}
         >
           ⚡
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontWeight: 600, fontSize: '0.85rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Swiggy Instamart
-          </p>
-          <h1 style={{ fontSize: 'clamp(2rem, 6vw, 3rem)', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.15, marginBottom: 4 }}>
-            Knowledge Quiz
+          <h1 style={{ fontSize: 'clamp(2rem, 6vw, 3rem)', fontWeight: 800, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.15, marginBottom: 8 }}>
+            {APP_NAME}
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '1rem', fontWeight: 500, marginBottom: 40 }}>
-            Test your Swiggy Ads knowledge. Compete live.
+          <p style={{ color: T.teal, fontSize: '1rem', fontWeight: 700, marginBottom: 40 }}>
+            {APP_SUBTITLE}
           </p>
         </motion.div>
 
@@ -84,20 +80,20 @@ export default function Landing({ onJoinAsPlayer, onAdminLogin }) {
             whileTap={{ scale: 0.97 }}
             onClick={onJoinAsPlayer}
             style={{
-              background: 'rgba(255,255,255,0.97)',
+              background: T.card,
               borderRadius: 20,
               padding: '24px 20px',
               cursor: 'pointer',
-              border: '2px solid rgba(54,117,136,0.35)',
-              boxShadow: '0 0 30px rgba(54,117,136,0.2), 0 8px 24px rgba(0,0,0,0.15)',
+              border: `2px solid ${tint(T.teal, 0.35)}`,
+              boxShadow: `0 0 30px ${tint(T.teal, 0.14)}, 0 8px 24px rgba(28,74,87,0.10)`,
               textAlign: 'center'
             }}
           >
             <div style={{ fontSize: '2rem', marginBottom: 10 }}>📣</div>
-            <h3 style={{ color: '#1A1A2A', fontSize: '1.05rem', fontWeight: 800, marginBottom: 6 }}>Join the Quiz</h3>
-            <p style={{ color: '#6b7280', fontSize: '0.8rem', fontWeight: 500, marginBottom: 16 }}>Enter your name & compete</p>
+            <h3 style={{ color: T.ink, fontSize: '1.05rem', fontWeight: 800, marginBottom: 6 }}>Join the Quiz</h3>
+            <p style={{ color: T.ink3, fontSize: '0.8rem', fontWeight: 500, marginBottom: 16 }}>Enter your name & compete</p>
             <div style={{
-              background: 'linear-gradient(135deg, #FC8019, #E35D34)',
+              background: T.gradPrimary,
               color: '#fff', padding: '10px 0', borderRadius: 10,
               fontWeight: 700, fontSize: '0.9rem'
             }}>
@@ -111,37 +107,36 @@ export default function Landing({ onJoinAsPlayer, onAdminLogin }) {
             whileTap={{ scale: 0.97 }}
             onClick={onAdminLogin}
             style={{
-              background: 'rgba(28,74,87,0.75)',
-              backdropFilter: 'blur(16px)',
+              background: T.card,
               borderRadius: 20,
               padding: '24px 20px',
               cursor: 'pointer',
-              border: '2px solid rgba(252,128,25,0.3)',
-              boxShadow: '0 0 30px rgba(252,128,25,0.1), 0 8px 24px rgba(0,0,0,0.3)',
+              border: `2px solid ${tint(T.orange, 0.35)}`,
+              boxShadow: `0 0 30px ${tint(T.orange, 0.10)}, 0 8px 24px rgba(28,74,87,0.10)`,
               textAlign: 'center'
             }}
           >
             <div style={{ fontSize: '2rem', marginBottom: 10 }}>⚙️</div>
-            <h3 style={{ color: '#fff', fontSize: '1.05rem', fontWeight: 800, marginBottom: 6 }}>Host Controls</h3>
-            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.8rem', fontWeight: 500, marginBottom: 16 }}>Admin access required</p>
+            <h3 style={{ color: T.ink, fontSize: '1.05rem', fontWeight: 800, marginBottom: 6 }}>Host Controls</h3>
+            <p style={{ color: T.ink3, fontSize: '0.8rem', fontWeight: 500, marginBottom: 16 }}>Admin access required</p>
             <div style={{
-              background: 'rgba(255,255,255,0.1)',
-              color: 'rgba(255,255,255,0.8)', padding: '10px 0', borderRadius: 10,
-              fontWeight: 700, fontSize: '0.9rem',
-              border: '1px solid rgba(255,255,255,0.12)'
+              background: T.tealDark,
+              color: '#fff', padding: '10px 0', borderRadius: 10,
+              fontWeight: 700, fontSize: '0.9rem'
             }}>
               Admin Login
             </div>
           </motion.div>
         </motion.div>
 
+        {/* Wordmark */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
-          style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem', fontWeight: 500 }}
+          style={{ color: T.teal, fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase' }}
         >
-          Powered by Growisto
+          {ORG}
         </motion.p>
       </div>
     </div>

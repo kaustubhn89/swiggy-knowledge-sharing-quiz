@@ -1,14 +1,15 @@
 import { motion } from 'framer-motion'
 import { questions } from '../questions'
+import { T } from '../brand'
 
-const ANS_COLORS = { A: '#367588', B: '#1C4A57', C: '#FC8019', D: '#7B5EA7' }
+const ANS_COLORS = T.ans
 
 export default function AnswerLocked({ answer, currentQuestion }) {
   const q = questions[currentQuestion]
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#1A1A2A',
+      minHeight: '100vh', background: T.bg,
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', padding: 24
     }}>
@@ -25,7 +26,7 @@ export default function AnswerLocked({ answer, currentQuestion }) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', marginBottom: 8 }}
+        style={{ fontSize: '1.5rem', fontWeight: 800, color: T.ink, marginBottom: 8 }}
       >
         Answer Locked In!
       </motion.h2>
@@ -39,7 +40,7 @@ export default function AnswerLocked({ answer, currentQuestion }) {
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '14px 24px', borderRadius: 14,
             background: ANS_COLORS[answer],
-            boxShadow: `0 8px 24px ${ANS_COLORS[answer]}60`,
+            boxShadow: `0 8px 24px ${ANS_COLORS[answer]}55`,
             margin: '16px 0', maxWidth: 340
           }}
         >
@@ -56,7 +57,7 @@ export default function AnswerLocked({ answer, currentQuestion }) {
           </span>
         </motion.div>
       ) : (
-        <p style={{ color: 'rgba(255,255,255,0.4)', marginTop: 12, marginBottom: 16 }}>You didn't answer in time</p>
+        <p style={{ color: T.ink3, marginTop: 12, marginBottom: 16 }}>You didn't answer in time</p>
       )}
 
       {/* Pulsing waiting indicator */}
@@ -66,12 +67,13 @@ export default function AnswerLocked({ answer, currentQuestion }) {
         transition={{ delay: 0.4 }}
         style={{
           marginTop: 24, padding: '14px 24px',
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: T.card,
+          border: `1px solid ${T.line}`,
           borderRadius: 14, textAlign: 'center',
-          color: 'rgba(255,255,255,0.45)',
+          color: T.ink3,
           fontSize: '0.9rem', fontWeight: 600,
-          display: 'flex', alignItems: 'center', gap: 10, maxWidth: 340
+          display: 'flex', alignItems: 'center', gap: 10, maxWidth: 340,
+          boxShadow: T.shadowCard
         }}
       >
         <div style={{ display: 'flex', gap: 4 }}>
@@ -79,7 +81,7 @@ export default function AnswerLocked({ answer, currentQuestion }) {
             <motion.span key={i}
               animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
               transition={{ duration: 1.2, delay: i * 0.18, repeat: Infinity }}
-              style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.4)' }}
+              style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: T.teal }}
             />
           ))}
         </div>

@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { questions } from '../questions'
+import { T, tint } from '../brand'
 
-const ANS_COLORS = { A: '#367588', B: '#1C4A57', C: '#FC8019', D: '#7B5EA7' }
-const ANS_GLOW   = { A: '#36758860', B: '#1C4A5760', C: '#FC801960', D: '#7B5EA760' }
+const ANS_COLORS = T.ans
 const DIFF_COLORS = {
-  Easy:   { bg: 'rgba(72,187,120,0.15)',  color: '#48BB78' },
-  Medium: { bg: 'rgba(252,128,25,0.15)',  color: '#FC8019' },
-  Hard:   { bg: 'rgba(245,101,101,0.15)', color: '#F56565' }
+  Easy:   { bg: tint(T.green, 0.12),  color: T.green },
+  Medium: { bg: tint(T.orange, 0.12), color: T.orange },
+  Hard:   { bg: tint(T.red, 0.12),    color: T.red }
 }
 
 function CircularTimer({ totalTime, questionStartTime }) {
@@ -35,9 +35,9 @@ function CircularTimer({ totalTime, questionStartTime }) {
     return () => cancelAnimationFrame(rafRef.current)
   }, [totalTime, questionStartTime])
 
-  const color    = progress > 0.5 ? '#367588' : progress > 0.25 ? '#FC8019' : '#F56565'
+  const color      = progress > 0.5 ? T.teal : progress > 0.25 ? T.orange : T.red
   const dashoffset = CIRC * (1 - progress)
-  const glowSize = Math.round((1 - progress) * 28)
+  const glowSize   = Math.round((1 - progress) * 28)
 
   return (
     <motion.div
@@ -47,18 +47,18 @@ function CircularTimer({ totalTime, questionStartTime }) {
     >
       <div style={{
         position: 'absolute', inset: -6, borderRadius: '50%',
-        boxShadow: `0 0 ${glowSize}px ${color}70`,
+        boxShadow: `0 0 ${glowSize}px ${color}55`,
         transition: 'box-shadow 0.4s ease'
       }} />
       <svg width="140" height="140" viewBox="0 0 140 140">
-        <circle cx="70" cy="70" r={R} fill="#14141F" />
-        <circle cx="70" cy="70" r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="8" />
+        <circle cx="70" cy="70" r={R} fill={T.card} />
+        <circle cx="70" cy="70" r={R} fill="none" stroke={T.line} strokeWidth="8" />
         <circle
           cx="70" cy="70" r={R} fill="none"
           stroke={color} strokeWidth="8" strokeLinecap="round"
           strokeDasharray={CIRC} strokeDashoffset={dashoffset}
           transform="rotate(-90 70 70)"
-          style={{ transition: 'stroke-dashoffset 0.05s linear, stroke 0.4s ease', filter: `drop-shadow(0 0 5px ${color})` }}
+          style={{ transition: 'stroke-dashoffset 0.05s linear, stroke 0.4s ease', filter: `drop-shadow(0 0 5px ${color}80)` }}
         />
       </svg>
       <div style={{
@@ -74,7 +74,7 @@ function CircularTimer({ totalTime, questionStartTime }) {
         >
           {displaySecs}
         </motion.span>
-        <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', fontWeight: 600, letterSpacing: '0.06em', marginTop: 2 }}>SEC</span>
+        <span style={{ fontSize: '0.65rem', color: T.ink3, fontWeight: 600, letterSpacing: '0.06em', marginTop: 2 }}>SEC</span>
       </div>
     </motion.div>
   )
@@ -124,31 +124,33 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
     onAnswer(letter)
   }, [selected, onAnswer])
 
-  const diff = DIFF_COLORS[q.difficulty] || DIFF_COLORS.Easy
+  const diff = q.difficulty ? (DIFF_COLORS[q.difficulty] || DIFF_COLORS.Easy) : null
 
   return (
-    <div style={{ minHeight: '100vh', background: '#1A1A2A', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', flexDirection: 'column' }}>
 
       {/* Top bar */}
       <div style={{
         padding: '16px 20px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: '1px solid rgba(255,255,255,0.06)'
+        borderBottom: `1px solid ${T.line}`
       }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ background: 'rgba(252,128,25,0.15)', color: '#FC8019', padding: '6px 14px', borderRadius: 20, fontSize: '0.85rem', fontWeight: 800 }}>
+          <div style={{ background: tint(T.teal, 0.12), color: T.teal, padding: '6px 14px', borderRadius: 20, fontSize: '0.85rem', fontWeight: 800 }}>
             Q{gameState.currentQuestion + 1}/{questions.length}
           </div>
-          <div style={{ background: diff.bg, color: diff.color, padding: '6px 12px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700 }}>
-            {q.difficulty.toUpperCase()}
-          </div>
+          {diff && (
+            <div style={{ background: diff.bg, color: diff.color, padding: '6px 12px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700 }}>
+              {q.difficulty.toUpperCase()}
+            </div>
+          )}
         </div>
         {/* Progress dots */}
         <div style={{ display: 'flex', gap: 4 }}>
           {questions.map((_, i) => (
             <div key={i} style={{
               width: 6, height: 6, borderRadius: '50%',
-              background: i < gameState.currentQuestion ? '#FC8019' : i === gameState.currentQuestion ? '#fff' : 'rgba(255,255,255,0.15)',
+              background: i < gameState.currentQuestion ? T.teal : i === gameState.currentQuestion ? T.orange : T.line2,
               transition: 'background 0.3s'
             }} />
           ))}
@@ -165,7 +167,7 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-            style={{ flex: 1, fontSize: 'clamp(1.05rem, 2.5vw, 1.35rem)', fontWeight: 800, color: '#fff', lineHeight: 1.45, paddingTop: 8 }}
+            style={{ flex: 1, fontSize: 'clamp(1.05rem, 2.5vw, 1.35rem)', fontWeight: 800, color: T.ink, lineHeight: 1.45, paddingTop: 8 }}
           >
             {q.text}
           </motion.p>
@@ -182,30 +184,30 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
             style={{
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '5px 12px', borderRadius: 20,
-              background: fastZone ? 'rgba(72,187,120,0.15)' : 'rgba(252,128,25,0.1)',
-              border: `1px solid ${fastZone ? 'rgba(72,187,120,0.4)' : 'rgba(252,128,25,0.3)'}`
+              background: fastZone ? tint(T.green, 0.12) : tint(T.orange, 0.10),
+              border: `1px solid ${fastZone ? tint(T.green, 0.35) : tint(T.orange, 0.30)}`
             }}
           >
             {fastZone && <span style={{ fontSize: '0.82rem' }}>⚡</span>}
             <span style={{
-              color: fastZone ? '#48BB78' : '#FC8019',
+              color: fastZone ? T.green : T.orange,
               fontWeight: 900, fontSize: '0.88rem'
             }}>
               {fastZone ? '+5' : '+3'}
             </span>
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', fontWeight: 500 }}>
+            <span style={{ color: T.ink3, fontSize: '0.72rem', fontWeight: 500 }}>
               {fastZone ? 'correct · first 15s' : 'correct · after 15s'}
             </span>
           </motion.div>
           {/* Wrong */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 800, fontSize: '0.8rem' }}>0</span>
-            <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.72rem', fontWeight: 500 }}>wrong</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20, background: T.fill, border: `1px solid ${T.line}` }}>
+            <span style={{ color: T.ink2, fontWeight: 800, fontSize: '0.8rem' }}>0</span>
+            <span style={{ color: T.ink3, fontSize: '0.72rem', fontWeight: 500 }}>wrong</span>
           </div>
           {/* No answer */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <span style={{ color: '#F56565', fontWeight: 800, fontSize: '0.8rem' }}>−1</span>
-            <span style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.72rem', fontWeight: 500 }}>no answer</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20, background: T.fill, border: `1px solid ${T.line}` }}>
+            <span style={{ color: T.red, fontWeight: 800, fontSize: '0.8rem' }}>−1</span>
+            <span style={{ color: T.ink3, fontSize: '0.72rem', fontWeight: 500 }}>no answer</span>
           </div>
         </div>
 
@@ -217,8 +219,8 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
             transition={{ type: 'spring', stiffness: 280, damping: 22 }}
             style={{
               padding: '28px 20px', borderRadius: 16, textAlign: 'center',
-              background: 'rgba(245,101,101,0.07)',
-              border: '1px solid rgba(245,101,101,0.2)'
+              background: tint(T.red, 0.07),
+              border: `1px solid ${tint(T.red, 0.22)}`
             }}
           >
             <motion.div
@@ -226,10 +228,10 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
               transition={{ duration: 0.5, delay: 0.1 }}
               style={{ fontSize: '2.4rem', marginBottom: 10 }}
             >⏰</motion.div>
-            <div style={{ color: '#F56565', fontWeight: 800, fontSize: '1.05rem', marginBottom: 6 }}>
+            <div style={{ color: T.red, fontWeight: 800, fontSize: '1.05rem', marginBottom: 6 }}>
               Time&apos;s up!
             </div>
-            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.85rem' }}>
+            <div style={{ color: T.ink3, fontSize: '0.85rem' }}>
               Waiting for the next question...
             </div>
           </motion.div>
@@ -266,15 +268,15 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '16px 18px', borderRadius: 16,
                   background: ANS_COLORS[letter],
-                  border: isSelected ? '2px solid rgba(255,255,255,0.8)' : '2px solid transparent',
+                  border: isSelected ? '2px solid rgba(255,255,255,0.9)' : '2px solid transparent',
                   color: '#fff', fontFamily: 'inherit',
                   fontSize: '0.95rem', fontWeight: 600,
                   cursor: selected ? 'default' : 'pointer',
                   textAlign: 'left', lineHeight: 1.35,
                   filter: isDimmed ? 'blur(1.5px)' : 'none',
                   boxShadow: isSelected
-                    ? `0 0 28px ${ANS_GLOW[letter]}, 0 4px 16px rgba(0,0,0,0.3)`
-                    : '0 4px 16px rgba(0,0,0,0.25)',
+                    ? `0 0 28px ${ANS_COLORS[letter]}66, 0 4px 16px rgba(28,74,87,0.22)`
+                    : '0 4px 16px rgba(28,74,87,0.16)',
                   transition: 'filter 0.3s ease, border-color 0.15s, box-shadow 0.2s'
                 }}
               >
@@ -307,10 +309,10 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
               transition={{ type: 'spring', stiffness: 300, damping: 22 }}
               style={{
                 marginTop: 20, padding: '14px 20px',
-                background: 'rgba(72,187,120,0.12)',
-                border: '1px solid rgba(72,187,120,0.3)',
+                background: tint(T.green, 0.10),
+                border: `1px solid ${tint(T.green, 0.30)}`,
                 borderRadius: 14, textAlign: 'center',
-                color: '#48BB78', fontWeight: 700, fontSize: '0.95rem',
+                color: T.green, fontWeight: 700, fontSize: '0.95rem',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
               }}
             >

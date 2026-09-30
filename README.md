@@ -1,40 +1,46 @@
-# Swiggy Knowledge Sharing Quiz
+# Deals, Data & Decisions — Knowledge Sharing Quiz · Growisto
 
-Real-time multiplayer quiz for Swiggy Ads knowledge sharing sessions at Growisto.
+Real-time multiplayer quiz for Growisto's internal knowledge sharing sessions.
 
 **GitHub:** https://github.com/kaustubhn89/swiggy-knowledge-sharing-quiz
-**Live URL:** _(add after Render deploy)_
+**Live URL:** https://swiggy-knowledge-sharing-quiz.onrender.com
+
+> The repo / Render service / Firebase project keep their original "swiggy" names — the app itself is Growisto-branded and quiz-agnostic. Swap `src/questions.js` + `src/brand.js` to run a different quiz.
 
 ## Quick Start
 
-### Admin
-1. Open the app URL
-2. Click **Admin Login**
-3. Password: `growisto@swiggy2026`
-4. Wait for players to join, then click **Start Game**
-5. Use **Next Question** to advance (enabled after ≥1 answer or timer expires)
-6. Click **Show Leaderboard** after Q8
-7. **Play Again** resets everything
+### Admin (host)
+1. Open the app URL → **Host Controls → Admin Login**
+2. Password: `growisto@2026`
+3. **＋ New Quiz** → give it a name → **Start Quiz**
+4. Share the URL; wait for players in the **Lobby**, then **Start Game**
+5. **Next Question →** advances (enabled once ≥1 answer is in or the timer expires)
+6. After the last question, **🏆 Show Leaderboard**
+7. **💾 Save Results** keeps the session in the list (rerun/delete later), or **← Back to Sessions** to discard
 
 ### Players
-1. Open the same URL on any device
-2. Click **Join as Player**
-3. Enter your name
-4. Wait for the admin to start — quiz begins automatically
-5. Tap an answer before the timer runs out
-6. Final scores shown on the leaderboard
+1. Open the same URL on any device → **Join the Quiz**
+2. Read the rules → enter your name
+3. Wait for the host to start — the quiz begins automatically
+4. Tap an answer before the timer runs out
+5. Final standings on the leaderboard
 
 ## Scoring
 | Outcome | Points |
 |---------|--------|
-| Correct answer | 1000 + speed bonus |
-| Speed bonus | (time remaining / total time) × 500 |
-| Wrong / no answer | 0 |
+| Correct within first 15 s | **+5** |
+| Correct after 15 s | **+3** |
+| Wrong answer | 0 |
+| No answer (timer expires) | **−1** |
+
+## Questions
+10 questions on Amazon deals, data reads and decision-making (20 s each, one 30 s). Edit `src/questions.js`.
+Answer options are shuffled with a fixed seed at load time, so the correct answer sits in a different slot per question and every player sees the same order.
 
 ## Tech Stack
-- React 18 + Vite
+- React 18 + Vite, framer-motion, canvas-confetti
 - Firebase Realtime Database (asia-southeast1)
-- Deployed on Render (static site)
+- Deployed on Render (static site) — auto-deploys on push to `main`
 
 ## Local Development
 ```bash
@@ -42,16 +48,11 @@ npm install
 npm run dev
 ```
 
-## Deploy to Render (one-time setup)
-
-1. Push this repo to GitHub
-2. Go to [render.com](https://render.com) → **New → Static Site**
-3. Connect your GitHub repo `swiggy-knowledge-sharing-quiz`
-4. Render auto-detects `render.yaml` — click **Deploy**
-5. Done. Update the Live URL above once deployed.
+## Deploy to Render
+Already connected. Push to `main` and Render rebuilds from `render.yaml` (`npm install && npm run build`, publishes `./dist`).
 
 ## Firebase Rules
-Set Realtime Database rules to allow read/write for the app to work:
+Realtime Database rules must allow read/write for the app to work:
 ```json
 {
   "rules": {

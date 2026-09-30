@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { T } from '../brand'
 
 export default function PlayerJoin({ onJoin, onBack, noSession }) {
   const [name, setName] = useState('')
@@ -14,10 +15,12 @@ export default function PlayerJoin({ onJoin, onBack, noSession }) {
     setLoading(false)
   }
 
+  const ready = !!name.trim() && !loading
+
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #FC8019 0%, #E35D34 35%, #1C4A57 70%, #0f2d38 100%)',
+      background: T.bg,
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
     }}>
       <motion.div
@@ -25,11 +28,12 @@ export default function PlayerJoin({ onJoin, onBack, noSession }) {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 260, damping: 22 }}
         style={{
-          background: '#fff',
+          background: T.card,
           borderRadius: 24,
           padding: '40px 32px',
           width: '100%', maxWidth: 420,
-          boxShadow: '0 24px 64px rgba(0,0,0,0.3)'
+          border: `1px solid ${T.line}`,
+          boxShadow: T.shadowModal
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
@@ -40,8 +44,8 @@ export default function PlayerJoin({ onJoin, onBack, noSession }) {
           >
             👋
           </motion.div>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#1A1A2A', marginBottom: 6 }}>What's your name?</h2>
-          <p style={{ color: '#6b7280', fontSize: '0.9rem', fontWeight: 500 }}>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: T.ink, marginBottom: 6 }}>What's your name?</h2>
+          <p style={{ color: T.ink3, fontSize: '0.9rem', fontWeight: 500 }}>
             {noSession ? "Quiz hasn't started yet — enter your name to be ready" : 'This will appear on the live leaderboard'}
           </p>
         </div>
@@ -59,34 +63,34 @@ export default function PlayerJoin({ onJoin, onBack, noSession }) {
               width: '100%',
               padding: '16px 20px',
               borderRadius: 50,
-              border: '2px solid #e5e7eb',
+              border: `2px solid ${T.line2}`,
               fontSize: '1rem',
               fontFamily: 'inherit',
               fontWeight: 600,
-              color: '#1A1A2A',
-              background: '#f9fafb',
+              color: T.ink,
+              background: T.fill,
               outline: 'none',
               marginBottom: 16,
               transition: 'border-color 0.2s',
             }}
-            onFocus={e => e.target.style.borderColor = '#FC8019'}
-            onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+            onFocus={e => e.target.style.borderColor = T.teal}
+            onBlur={e => e.target.style.borderColor = T.line2}
           />
 
           <motion.button
             type="submit"
-            disabled={!name.trim() || loading}
-            whileHover={name.trim() && !loading ? { scale: 1.02 } : {}}
-            whileTap={name.trim() && !loading ? { scale: 0.97 } : {}}
+            disabled={!ready}
+            whileHover={ready ? { scale: 1.02 } : {}}
+            whileTap={ready ? { scale: 0.97 } : {}}
             style={{
               width: '100%', padding: '16px',
               borderRadius: 50, border: 'none',
-              background: name.trim() && !loading ? 'linear-gradient(135deg, #FC8019, #E35D34)' : '#e5e7eb',
-              color: name.trim() && !loading ? '#fff' : '#9ca3af',
+              background: ready ? T.gradPrimary : T.disabled,
+              color: ready ? '#fff' : T.ink4,
               fontSize: '1rem', fontWeight: 700, fontFamily: 'inherit',
-              cursor: name.trim() && !loading ? 'pointer' : 'not-allowed',
+              cursor: ready ? 'pointer' : 'not-allowed',
               marginBottom: 12,
-              boxShadow: name.trim() && !loading ? '0 8px 24px rgba(252,128,25,0.35)' : 'none',
+              boxShadow: ready ? T.shadowBtn : 'none',
               transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
             }}
           >
@@ -111,8 +115,8 @@ export default function PlayerJoin({ onJoin, onBack, noSession }) {
 
           <button type="button" onClick={onBack} style={{
             width: '100%', padding: '12px', borderRadius: 50,
-            border: '2px solid #e5e7eb', background: 'transparent',
-            color: '#6b7280', fontSize: '0.9rem', fontWeight: 600,
+            border: `2px solid ${T.line2}`, background: 'transparent',
+            color: T.ink3, fontSize: '0.9rem', fontWeight: 600,
             fontFamily: 'inherit', cursor: 'pointer'
           }}>
             ← Back
