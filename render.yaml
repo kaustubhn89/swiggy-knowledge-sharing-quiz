@@ -1,7 +1,11 @@
+# Render config for the Amazon DSP quiz (branch: dsp-quiz).
+# This is a SEPARATE static site from the live "Deals, Data & Decisions" quiz,
+# which is deployed from `main` as the service `swiggy-knowledge-sharing-quiz`.
 services:
   - type: web
-    name: swiggy-knowledge-sharing-quiz
+    name: growisto-dsp-quiz
     runtime: static
+    branch: dsp-quiz
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     pullRequestPreviewsEnabled: false

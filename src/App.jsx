@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ref, onValue, set, update, remove } from 'firebase/database'
-import { db } from './firebase'
+import { onValue, set, update, remove } from 'firebase/database'
+import { dbRef } from './db'
 import { questions } from './questions'
+import { T } from './brand'
 import Landing from './components/Landing'
 import RulesScreen from './components/RulesScreen'
 import PlayerJoin from './components/PlayerJoin'
@@ -17,6 +18,14 @@ import AdminControl from './components/AdminControl'
 import AdminSessions from './components/AdminSessions'
 
 const ADMIN_PASSWORD = 'growisto@2026'
+const STORE_ID   = 'dspPlayerId'
+const STORE_NAME = 'dspPlayerName'
+
+const store = {
+  get: (k)    => { try { return localStorage.getItem(k) } catch { return null } },
+  set: (k, v) => { try { localStorage.setItem(k, v) } catch { /* private mode */ } },
+  del: (k)    => { try { localStorage.removeItem(k) } catch { /* private mode */ } },
+}
 
 function genId() {
   return Math.random().toString(36).slice(2, 11) + Date.now().toString(36)
@@ -26,7 +35,20 @@ function genSessionName() {
   const now = new Date()
   const d = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   const t = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-  return `Quiz – ${d}, ${t}`
+  return `DSP Quiz – ${d}, ${t}`
+}
+
+// Opening the site at /host (or ?host) goes straight to the host login
+function wantsHost() {
+  try {
+    return /^\/host\/?$/i.test(window.location.pathname) || new URLSearchParams(window.location.search).has('host')
+  } catch { return false }
+}
+
+function friendlyDbError(e) {
+  const msg = String(e?.code || e?.message || e)
+  if (/permission/i.test(msg)) return "Can't reach the quiz database (permission denied). Host: check the Firebase Realtime Database rules."
+  return `Quiz database error: ${msg}`
 }
 
 const pageVariants = {
@@ -36,17 +58,18 @@ const pageVariants = {
 }
 
 export default function App() {
-  const [userType, setUserType]         = useState(null)
-  const [adminAuth, setAdminAuth]       = useState(false)
-  const [adminView, setAdminView]       = useState('sessions') // 'sessions' | 'managing'
+  const [userType, setUserType]   = useState(() => (wantsHost() ? 'admin' : null))
+  const [adminAuth, setAdminAuth] = useState(false)
+  const [adminView, setAdminView] = useState('sessions') // 'sessions' | 'managing'
   const [rulesAcknowledged, setRulesAcknowledged] = useState(false)
+  const [dbError, setDbError] = useState(null)
 
   const [playerId] = useState(() => {
-    let id = localStorage.getItem('sqPlayerId')
-    if (!id) { id = genId(); localStorage.setItem('sqPlayerId', id) }
+    let id = store.get(STORE_ID)
+    if (!id) { id = genId(); store.set(STORE_ID, id) }
     return id
   })
-  const [playerName, setPlayerName] = useState(() => localStorage.getItem('sqPlayerName') || '')
+  const [playerName, setPlayerName] = useState(() => store.get(STORE_NAME) || '')
 
   const [activeSessionId, setActiveSessionId] = useState(null)
   const [allSessions, setAllSessions]         = useState({})
@@ -63,53 +86,61 @@ export default function App() {
   playersRef.current  = players
   userTypeRef.current = userType
 
-  // Listen to activeSessionId + all sessions
+  const reportDbError = useCallback((e) => {
+    console.error(e)
+    setDbError(friendlyDbError(e))
+  }, [])
+
+  // Listen to activeSessionId + all sessions (everything under the dsp/ namespace)
   useEffect(() => {
-    const unsubActive = onValue(ref(db, 'activeSessionId'), snap => {
+    const unsubActive = onValue(dbRef('activeSessionId'), snap => {
       setActiveSessionId(snap.val() || null)
-    })
-    const unsubAll = onValue(ref(db, 'sessions'), snap => {
+    }, reportDbError)
+    const unsubAll = onValue(dbRef('sessions'), snap => {
       const data = snap.val() || {}
       const metas = {}
       Object.entries(data).forEach(([id, s]) => {
         if (s?.meta) metas[id] = { ...s.meta, playerCount: Object.keys(s.players || {}).length }
       })
       setAllSessions(metas)
-    })
+    }, reportDbError)
     return () => { unsubActive(); unsubAll() }
-  }, [])
+  }, [reportDbError])
 
-  // Listen to active session's game state + players
+  // Listen to the active session's game state + players
   useEffect(() => {
     if (!activeSessionId) {
       setGameState({ status: 'waiting', currentQuestion: 0, questionStartTime: 0 })
       setPlayers({})
       return
     }
-    const unsubGame = onValue(ref(db, `sessions/${activeSessionId}/meta`), snap => {
+    const unsubGame = onValue(dbRef(`sessions/${activeSessionId}/meta`), snap => {
       setGameState(snap.val() || { status: 'waiting', currentQuestion: 0, questionStartTime: 0 })
-    })
-    const unsubPlayers = onValue(ref(db, `sessions/${activeSessionId}/players`), snap => {
+    }, reportDbError)
+    const unsubPlayers = onValue(dbRef(`sessions/${activeSessionId}/players`), snap => {
       setPlayers(snap.val() || {})
-    })
+    }, reportDbError)
     return () => { unsubGame(); unsubPlayers() }
-  }, [activeSessionId])
+  }, [activeSessionId, reportDbError])
 
-  // Clear player name + rules flag when new empty session appears
+  // A player who is waiting but isn't registered in the current session (a new
+  // session started, or a returning phone from an earlier one) re-enters the
+  // name flow instead of sitting unregistered in the waiting room.
   useEffect(() => {
-    if (userType === 'player' && playerName && gameState.status === 'waiting' && Object.keys(players).length === 0) {
+    if (userType === 'player' && playerName && gameState.status === 'waiting' && !players[playerId]) {
       setPlayerName('')
       setRulesAcknowledged(false)
-      localStorage.removeItem('sqPlayerName')
+      store.del(STORE_NAME)
     }
-  }, [players, gameState.status, userType, playerName])
+  }, [players, gameState.status, userType, playerName, playerId])
 
-  // Question change → show answer reveal
+  // Question change → show the previous question's reveal to players who answered
   useEffect(() => {
     if (gameState.currentQuestion !== prevQuestion.current) {
       if (prevQuestion.current >= 0 && userTypeRef.current === 'player') {
         const prevAns = playersRef.current[playerId]?.answers?.[prevQuestion.current]
-        if (prevAns && prevAns.answer !== null) {
+        // Firebase drops null fields, so a timed-out answer comes back with `answer` missing
+        if (prevAns && prevAns.answer != null) {
           setRevealData({
             questionIdx: prevQuestion.current,
             answer:      prevAns.answer,
@@ -141,10 +172,13 @@ export default function App() {
   const handlePlayerJoin = async (name) => {
     if (!activeSessionId || gameState.status === 'leaderboard') return
     setPlayerName(name)
-    localStorage.setItem('sqPlayerName', name)
-    await set(ref(db, `sessions/${activeSessionId}/players/${playerId}`), { name, totalScore: 0, answers: {} })
+    store.set(STORE_NAME, name)
+    try {
+      await set(dbRef(`sessions/${activeSessionId}/players/${playerId}`), { name, totalScore: 0, answers: {} })
+    } catch (e) { reportDbError(e) }
   }
 
+  // `answer` is the canonical letter (A = options[0] …), whatever slot it was shown in
   const handleAnswer = async (answer) => {
     if (answerLocked || !activeSessionId) return
     setAnswerLocked(true)
@@ -160,10 +194,12 @@ export default function App() {
     const newAnswers      = { ...existingAnswers, [gameState.currentQuestion]: { answer, timestamp: Date.now(), score } }
     const newTotal        = Object.values(newAnswers).reduce((s, a) => s + (a.score || 0), 0)
 
-    await update(ref(db, `sessions/${activeSessionId}/players/${playerId}`), {
-      [`answers/${gameState.currentQuestion}`]: { answer, timestamp: Date.now(), score },
-      totalScore: newTotal
-    })
+    try {
+      await update(dbRef(`sessions/${activeSessionId}/players/${playerId}`), {
+        [`answers/${gameState.currentQuestion}`]: { answer, timestamp: Date.now(), score },
+        totalScore: newTotal
+      })
+    } catch (e) { reportDbError(e) }
   }
 
   const handleTimeout = useCallback(async () => {
@@ -177,85 +213,103 @@ export default function App() {
     const newAnswers = { ...existingAnswers, [qIdx]: { answer: null, timestamp: Date.now(), score: -1 } }
     const newTotal   = Object.values(newAnswers).reduce((s, a) => s + (a.score || 0), 0)
 
-    await update(ref(db, `sessions/${activeSessionId}/players/${playerId}`), {
-      [`answers/${qIdx}`]: { answer: null, timestamp: Date.now(), score: -1 },
-      totalScore: newTotal
-    })
-  }, [answerLocked, activeSessionId, gameState.currentQuestion, playerId])
+    try {
+      await update(dbRef(`sessions/${activeSessionId}/players/${playerId}`), {
+        [`answers/${qIdx}`]: { answer: null, timestamp: Date.now(), score: -1 },
+        totalScore: newTotal
+      })
+    } catch (e) { reportDbError(e) }
+  }, [answerLocked, activeSessionId, gameState.currentQuestion, playerId, reportDbError])
 
   // ── Admin game handlers ────────────────────────────
 
   const handleStartGame = async () => {
     if (!activeSessionId) return
-    await update(ref(db, `sessions/${activeSessionId}/meta`), {
-      status: 'question', currentQuestion: 0, questionStartTime: Date.now()
-    })
+    try {
+      await update(dbRef(`sessions/${activeSessionId}/meta`), { status: 'question', currentQuestion: 0, questionStartTime: Date.now() })
+    } catch (e) { reportDbError(e) }
   }
 
   const handleNextQuestion = async () => {
     if (!activeSessionId) return
     const next = gameState.currentQuestion + 1
-    if (next >= questions.length) {
-      await update(ref(db, `sessions/${activeSessionId}/meta`), { status: 'leaderboard' })
-    } else {
-      await update(ref(db, `sessions/${activeSessionId}/meta`), { currentQuestion: next, questionStartTime: Date.now() })
-    }
+    try {
+      if (next >= questions.length) {
+        await update(dbRef(`sessions/${activeSessionId}/meta`), { status: 'leaderboard' })
+      } else {
+        await update(dbRef(`sessions/${activeSessionId}/meta`), { currentQuestion: next, questionStartTime: Date.now() })
+      }
+    } catch (e) { reportDbError(e) }
   }
 
   const handleShowLeaderboard = async () => {
     if (!activeSessionId) return
-    await update(ref(db, `sessions/${activeSessionId}/meta`), { status: 'leaderboard' })
+    try {
+      await update(dbRef(`sessions/${activeSessionId}/meta`), { status: 'leaderboard' })
+    } catch (e) { reportDbError(e) }
   }
 
   // ── Session management handlers ────────────────────
 
-  const handleNewGame = async (customName) => {
+  const removeUnsavedSessions = () => {
     Object.entries(allSessions).forEach(([id, s]) => {
-      if (!s.saved) remove(ref(db, `sessions/${id}`))
+      if (!s.saved) remove(dbRef(`sessions/${id}`)).catch(reportDbError)
     })
+  }
+
+  const handleNewGame = async (customName) => {
+    removeUnsavedSessions()
     const sessionId = Date.now().toString()
-    await set(ref(db, `sessions/${sessionId}`), {
-      meta:    { name: customName || genSessionName(), status: 'waiting', currentQuestion: 0, questionStartTime: 0, createdAt: Date.now(), saved: false },
-      players: {}
-    })
-    await set(ref(db, 'activeSessionId'), sessionId)
-    setAdminView('managing')
+    try {
+      await set(dbRef(`sessions/${sessionId}`), {
+        meta:    { name: customName || genSessionName(), status: 'waiting', currentQuestion: 0, questionStartTime: 0, createdAt: Date.now(), saved: false },
+        players: {}
+      })
+      await set(dbRef('activeSessionId'), sessionId)
+      setAdminView('managing')
+    } catch (e) { reportDbError(e) }
   }
 
   const handleSaveSession = async () => {
     if (!activeSessionId) return
-    await update(ref(db, `sessions/${activeSessionId}/meta`), { saved: true })
-    await remove(ref(db, 'activeSessionId'))
-    setAdminView('sessions')
+    try {
+      await update(dbRef(`sessions/${activeSessionId}/meta`), { saved: true })
+      await remove(dbRef('activeSessionId'))
+      setAdminView('sessions')
+    } catch (e) { reportDbError(e) }
   }
 
   const handleAdminLeaveLeaderboard = async () => {
-    await remove(ref(db, 'activeSessionId'))
+    try { await remove(dbRef('activeSessionId')) } catch (e) { reportDbError(e) }
     setAdminView('sessions')
   }
 
   const handleContinueSession = async (sessionId) => {
-    await set(ref(db, 'activeSessionId'), sessionId)
-    setAdminView('managing')
+    try {
+      await set(dbRef('activeSessionId'), sessionId)
+      setAdminView('managing')
+    } catch (e) { reportDbError(e) }
   }
 
   const handleRerunSession = async (sessionId) => {
-    Object.entries(allSessions).forEach(([id, s]) => {
-      if (!s.saved) remove(ref(db, `sessions/${id}`))
-    })
+    removeUnsavedSessions()
     const newSessionId = Date.now().toString()
     const baseName     = (allSessions[sessionId]?.name || 'Quiz').replace(/ \(Rerun.*\)$/, '')
-    await set(ref(db, `sessions/${newSessionId}`), {
-      meta:    { name: `${baseName} (Rerun)`, status: 'waiting', currentQuestion: 0, questionStartTime: 0, createdAt: Date.now(), saved: false },
-      players: {}
-    })
-    await set(ref(db, 'activeSessionId'), newSessionId)
-    setAdminView('managing')
+    try {
+      await set(dbRef(`sessions/${newSessionId}`), {
+        meta:    { name: `${baseName} (Rerun)`, status: 'waiting', currentQuestion: 0, questionStartTime: 0, createdAt: Date.now(), saved: false },
+        players: {}
+      })
+      await set(dbRef('activeSessionId'), newSessionId)
+      setAdminView('managing')
+    } catch (e) { reportDbError(e) }
   }
 
   const handleDeleteSession = async (sessionId) => {
-    await remove(ref(db, `sessions/${sessionId}`))
-    if (activeSessionId === sessionId) await remove(ref(db, 'activeSessionId'))
+    try {
+      await remove(dbRef(`sessions/${sessionId}`))
+      if (activeSessionId === sessionId) await remove(dbRef('activeSessionId'))
+    } catch (e) { reportDbError(e) }
   }
 
   const handleAdminLogin = (pwd) => {
@@ -274,13 +328,13 @@ export default function App() {
       return 'admin-leaderboard'
     }
     if (userType === 'player') {
-      if (!rulesAcknowledged && !playerName)                              return 'player-rules'
-      if (!playerName)                                                     return 'player-join'
-      if (!activeSessionId || gameState.status === 'waiting')             return 'player-waiting'
-      if (gameState.status === 'leaderboard' && !players[playerId])       return 'player-waiting-post'
-      if (gameState.status === 'leaderboard')                             return 'leaderboard'
-      if (revealData)                                                      return `reveal-${revealData.questionIdx}`
-      if (gameState.status === 'question')                                return `player-q-${gameState.currentQuestion}`
+      if (!rulesAcknowledged && !playerName)                        return 'player-rules'
+      if (!playerName)                                               return 'player-join'
+      if (!activeSessionId || gameState.status === 'waiting')       return 'player-waiting'
+      if (gameState.status === 'leaderboard' && !players[playerId]) return 'player-waiting-post'
+      if (gameState.status === 'leaderboard')                       return 'leaderboard'
+      if (revealData)                                                return `reveal-${revealData.questionIdx}`
+      if (gameState.status === 'question')                          return `player-q-${gameState.currentQuestion}`
       return 'player-waiting'
     }
     return 'landing'
@@ -332,17 +386,17 @@ export default function App() {
       if (!activeSessionId || gameState.status === 'waiting') return <WaitingRoom playerName={playerName} players={players} />
 
       if (gameState.status === 'leaderboard') {
-        // Only show leaderboard to players who actually participated in this game
+        // Only players who took part in this game see its results
         if (players[playerId]) return <Leaderboard players={players} isAdmin={false} playerId={playerId} />
         return <WaitingRoom playerName={playerName} players={{}} />
       }
 
       if (gameState.status === 'question') {
-        if (revealData) return <AnswerReveal data={revealData} />
+        if (revealData) return <AnswerReveal data={revealData} playerId={playerId} />
         const existingAnswer = players[playerId]?.answers?.[gameState.currentQuestion]
         const isLocked       = answerLocked || !!existingAnswer
-        if (isLocked) return <AnswerLocked answer={lockedAnswer || existingAnswer?.answer} currentQuestion={gameState.currentQuestion} />
-        return <QuestionScreen gameState={gameState} onAnswer={handleAnswer} onTimeout={handleTimeout} />
+        if (isLocked) return <AnswerLocked answer={lockedAnswer || existingAnswer?.answer} currentQuestion={gameState.currentQuestion} playerId={playerId} />
+        return <QuestionScreen gameState={gameState} playerId={playerId} onAnswer={handleAnswer} onTimeout={handleTimeout} />
       }
 
       return <WaitingRoom playerName={playerName} players={players} />
@@ -352,17 +406,34 @@ export default function App() {
   }
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={getScreenKey()}
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        style={{ minHeight: '100vh' }}
-      >
-        {renderScreen()}
-      </motion.div>
-    </AnimatePresence>
+    <>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={getScreenKey()}
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          style={{ minHeight: '100vh' }}
+        >
+          {renderScreen()}
+        </motion.div>
+      </AnimatePresence>
+
+      {dbError && (
+        <div role="alert" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
+          background: T.alert, color: '#FFFFFF', padding: '10px 48px 10px 16px',
+          fontSize: '0.86rem', fontWeight: 600, textAlign: 'center', lineHeight: 1.4,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.35)'
+        }}>
+          ⚠ {dbError}
+          <button onClick={() => setDbError(null)} aria-label="Dismiss" style={{
+            position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+            background: 'transparent', border: 'none', color: '#FFFFFF', fontSize: '1.3rem', lineHeight: 1, cursor: 'pointer', padding: 6
+          }}>×</button>
+        </div>
+      )}
+    </>
   )
 }

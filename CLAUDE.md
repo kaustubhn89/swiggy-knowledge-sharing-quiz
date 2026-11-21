@@ -1,71 +1,50 @@
-# Deals, Data & Decisions — Growisto Knowledge Sharing Quiz
+# Amazon DSP, from zero: Quiz — Growisto Amazon Ads team
 
-Real-time multiplayer (Kahoot-style) quiz app used for Growisto's internal knowledge sharing sessions.
-Originally built for a Swiggy Ads session; repurposed in Sept 2026 with new questions + Growisto-neutral branding.
-Same repo, same Render URL, same Firebase project.
+Kahoot-style live quiz for the Amazon DSP knowledge-sharing sessions. This is the
+`dsp-quiz` branch: a separate copy of the live "Deals, Data & Decisions" quiz
+(`main`), with its own Render site and its own Firebase namespace. Game flow is
+unchanged from `main`; only questions, look and feel, and a few fixes differ.
 
-## Tech Stack
-- **Frontend**: React 18 + Vite, framer-motion, canvas-confetti
-- **Real-time sync**: Firebase Realtime Database
-- **Deployment**: Render (static site) via GitHub — auto-deploys on push to `main`
-- **Live URL**: https://swiggy-knowledge-sharing-quiz.onrender.com (service name in `render.yaml` — do not rename, it is the URL)
+## Where things live
+- **Questions (the only file to edit):** `src/data/dspQuestions.js` — `{ topic, question, options[4], correct (0-based), time }`
+- **Theme + copy:** `src/brand.js` (navy/orange palette, title, subtitle, footer, answer slot colours + shapes)
+- **Firebase namespace:** `src/db.js` → every path is `dsp/...` (`dsp/activeSessionId`, `dsp/sessions/{id}`)
+- **Shared UI bits:** `src/components/ui.jsx` (Shape icons, Growisto logo, DSP funnel strip, topic tag, footer)
+- **Logo:** `public/growisto-icon-white.png` (+ `public/favicon.png`)
 
-## Repurposing the quiz again
-Only two files need to change:
-- `src/questions.js` — question bank (arrays + `correctIndex`; options are seeded-shuffled at load so the correct answer isn't always in the same slot, and all clients see the same order)
-- `src/brand.js` — colours (`T`), `APP_NAME`, `APP_SUBTITLE`, `ORG`
-Do not touch `src/firebase.js`, `render.yaml`, or the game logic in `src/App.jsx`.
+## Do not touch
+- `src/firebase.js` — same Firebase project as the live quiz (`swiggy-knowledge-sharing-quiz`, asia-southeast1)
+- `main` branch / the `swiggy-knowledge-sharing-quiz` Render service — that's the live Deals, Data & Decisions quiz
 
-## Firebase Project
-- Project: `swiggy-knowledge-sharing-quiz` (name is historical — leave as is)
-- Database URL: `https://swiggy-knowledge-sharing-quiz-default-rtdb.asia-southeast1.firebasedatabase.app`
-- Rules must allow read/write (open rules for internal use)
+## Deploy
+- Render static site **growisto-dsp-quiz** builds from branch `dsp-quiz` (`npm install && npm run build`, publishes `dist`)
+- Live: https://growisto-dsp-quiz.onrender.com · Host: https://growisto-dsp-quiz.onrender.com/host
+- `npm run build` runs `scripts/check-questions.mjs` first; a malformed question bank fails the build, so Render keeps the last good version
 
-## Firebase DB Structure
-```
-/activeSessionId: string | null        -- pointer to the session players should join
-
-/sessions/{sessionId}/
-  meta/
-    name: string
-    status: "waiting" | "question" | "leaderboard"
-    currentQuestion: number
-    questionStartTime: number (Unix ms)
-    createdAt: number
-    saved: boolean                      -- unsaved sessions are cleaned up on next New Quiz
-  players/{playerId}/
-    name: string
-    totalScore: number
-    answers/{questionIndex}/
-      answer: "A" | "B" | "C" | "D" | null   -- null = timed out
-      timestamp: number
-      score: number
-```
+## How answers work
+- Each phone shows the 4 options in its own order (seeded per player + question, so a refresh keeps the order)
+- Colour + shape belong to the screen position (orange ▲, teal ◆, purple ●, blue ■); answers are stored by canonical letter (A = options[0] …) so scoring and the host's answer chart are identical for everyone
+- Host screen lists options in canonical order with neutral numbers (no shapes), since every phone differs
 
 ## Scoring
-- Correct within first 15s → **+5**
-- Correct after 15s → **+3**
-- Wrong → **0**
-- No answer (timer expires) → **−1**
-All clients compute time against `questionStartTime` written by the admin.
++5 correct within 15 s · +3 correct after · 0 wrong · −1 no answer (timer expiry). Time is measured from `questionStartTime` written by the host.
 
 ## Admin
-- Password: `growisto@2026` (in `src/App.jsx`)
-- Flow: Sessions list → New Quiz (name it) → Lobby → Start → Next Question… → Show Leaderboard → Save Results / Back to Sessions
+- Password `growisto@2026` (in `src/App.jsx`); `/host` (or `?host`) opens the host login directly
 
-## Brand Colors (Growisto)
+## Firebase rules (required)
+The app has no auth, so Realtime Database rules must allow public read/write on the paths both quizzes use:
+```json
+{ "rules": {
+    "activeSessionId": { ".read": true, ".write": true },
+    "sessions":        { ".read": true, ".write": true },
+    "dsp":             { ".read": true, ".write": true } } }
 ```
-teal:        #367588   (primary)
-dark-teal:   #1C4A57
-orange:      #E35D34   (accent)
-powder-blue: #B8DBD9
-off-white:   #F2F0EB   (page background)
-purple:      #7B5EA7   (4th answer slot)
-```
+"Test mode" rules expire after 30 days — if the app shows "Can't reach the quiz database (permission denied)", re-publish the rules above.
 
 ## Dev
 ```bash
-cd ~/Documents/Growisto/Tools/swiggy-quiz
+cd ~/Documents/Growisto/Tools/growisto-dsp-quiz   # git worktree of the same repo, on branch dsp-quiz
 npm install
 npm run dev
 ```

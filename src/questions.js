@@ -1,100 +1,52 @@
-// ── Deals, Data & Decisions — question bank ────────────────────────────
-// Author questions as option ARRAYS with a 0-based `correctIndex`.
-// At load time each question's options are shuffled with a deterministic
-// seed (derived from the question id), so:
-//   • the correct answer lands in a varied slot instead of always "B", and
-//   • every player and the admin see the *same* order (needed for the
-//     admin's answer-distribution chart and the reveal screen).
-// Change SHUFFLE_SEED to re-deal every question.
+// Adapter between the editable question bank (src/data/dspQuestions.js) and
+// the shape the game uses. Answers are always stored by CANONICAL letter
+// (A = options[0] … D = options[3]) so scoring and the host's answer chart are
+// identical for everyone, whatever order each phone shows.
+import { dspQuestions } from './data/dspQuestions.js'
 
-const RAW = [
-  {
-    id: 1, time: 20, correctIndex: 1,
-    text: "In Market Basket Analysis, what does 'Combination %' mean?",
-    options: [
-      "% of your customers who ever bought both items",
-      "% of orders with your ASIN that also had the other item",
-      "% of the other item's sales that came from you",
-      "Click share of the other item"
-    ]
-  },
-  {
-    id: 2, time: 20, correctIndex: 1,
-    text: "SQP, benzoyl peroxide facewash: 10% impression share but 5% click share. Likely fix?",
-    options: [
-      "Increase the daily budget",
-      "Improve main image, title and price appeal",
-      "Send more stock to FBA",
-      "Lower the bids"
-    ]
-  },
-  {
-    id: 3, time: 20, correctIndex: 1,
-    text: "Which promotion is best for increasing order value (basket size)?",
-    options: ["Lightning Deal", "Buy X Get Y / combo", "Coupon", "Prime Exclusive Discount"]
-  },
-  {
-    id: 4, time: 30, correctIndex: 3,
-    text: "₹999 product, ₹300 profit/unit, 20% off. To keep the same profit you need…",
-    options: ["1.2× the units", "1.5× the units", "2× the units", "3× the units"]
-  },
-  {
-    id: 5, time: 20, correctIndex: 0,
-    text: "Lightning Deal fee on our Amazon.in account (Sept 2026 create screen)?",
-    options: ["₹0 + 0% of sales", "₹6,000 per deal", "$70/day + 1% of sales", "2.5% of deal sales"]
-  },
-  {
-    id: 6, time: 20, correctIndex: 1,
-    text: "On Amazon.in, a coupon's discount must be between…",
-    options: ["1% and 25%", "5% and 50%", "10% and 60%", "20% and 80%"]
-  },
-  {
-    id: 7, time: 20, correctIndex: 1,
-    text: "The 'was price' Amazon uses is based on…",
-    options: [
-      "The M.R.P. printed on the pack",
-      "The 90-day median price customers paid",
-      "The lowest competitor price",
-      "The highest price in the last 30 days"
-    ]
-  },
-  {
-    id: 8, time: 20, correctIndex: 1,
-    text: "10ml moisturizer buyers often add a rival's face wash to the cart. Best move?",
-    options: [
-      "Ignore it, not our brand",
-      "Pair our mini face wash + target that ASIN",
-      "Pause moisturizer ads",
-      "Raise the moisturizer price"
-    ]
-  },
-  {
-    id: 9, time: 20, correctIndex: 2,
-    text: "Pimple patch → table lamp at 11.11%, from 18 orders. What's the right read?",
-    options: [
-      "Bundle patches with lamps",
-      "Target lamp ASINs with ads",
-      "Tiny base (2 orders): treat as noise",
-      "Launch a skincare lamp"
-    ]
-  },
-  {
-    id: 10, time: 20, correctIndex: 0,
-    text: "'solved sunscreen' (our own brand term): only 24% impression share. Signal?",
-    options: [
-      "Competitors are capturing our brand searches",
-      "Our listing is suppressed",
-      "Search volume data is wrong",
-      "Nothing, this is normal"
-    ]
-  }
-]
+export const LETTERS = ['A', 'B', 'C', 'D']
 
-const SHUFFLE_SEED = 20260930
-const LETTERS = ['A', 'B', 'C', 'D']
+export function validateQuestions(list) {
+  if (!Array.isArray(list) || list.length === 0) return ['The question list is empty or not an array.']
+  const errors = []
+  list.forEach((q, i) => {
+    const n = `Question ${i + 1}`
+    if (!q || typeof q !== 'object') { errors.push(`${n}: is not an object`); return }
+    if (typeof q.question !== 'string' || !q.question.trim()) errors.push(`${n}: "question" text is missing`)
+    if (q.topic != null && typeof q.topic !== 'string') errors.push(`${n}: "topic" must be text`)
+    if (!Array.isArray(q.options) || q.options.length !== 4) errors.push(`${n}: needs exactly 4 "options"`)
+    else if (q.options.some(o => typeof o !== 'string' || !o.trim())) errors.push(`${n}: every option must be non-empty text`)
+    else if (new Set(q.options.map(o => o.trim().toLowerCase())).size !== 4) errors.push(`${n}: two options are identical`)
+    if (!Number.isInteger(q.correct) || q.correct < 0 || q.correct > 3) errors.push(`${n}: "correct" must be 0, 1, 2 or 3`)
+    if (typeof q.time !== 'number' || !Number.isFinite(q.time) || q.time < 5 || q.time > 120) errors.push(`${n}: "time" must be a number of seconds between 5 and 120`)
+  })
+  return errors
+}
 
-// mulberry32 — tiny seeded PRNG; identical sequence on every client
-function rng(seed) {
+const problems = validateQuestions(dspQuestions)
+if (problems.length) console.error('[questions] Fix src/data/dspQuestions.js:\n- ' + problems.join('\n- '))
+
+export const questions = dspQuestions.map((q, i) => ({
+  id:      i + 1,
+  topic:   (q.topic || '').trim(),
+  text:    q.question,
+  options: { A: q.options[0], B: q.options[1], C: q.options[2], D: q.options[3] },
+  correct: LETTERS[q.correct],
+  time:    q.time,
+}))
+
+// ── Per-player option order ───────────────────────────────────────────────
+// Deterministic per (player, question): a refresh shows the same order, but
+// neighbours see different layouts. Returns canonical letters in slot order.
+const SALT = 'dsp-quiz-v1'
+
+function hash(str) { // FNV-1a, 32-bit
+  let h = 0x811c9dc5
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) }
+  return h >>> 0
+}
+
+function rng(seed) { // mulberry32
   let a = seed >>> 0
   return () => {
     a = (a + 0x6D2B79F5) >>> 0
@@ -105,24 +57,12 @@ function rng(seed) {
   }
 }
 
-function seededShuffle(arr, seed) {
-  const out = arr.slice()
-  const next = rng(seed)
+export function optionOrder(playerId, questionIdx) {
+  const next = rng(hash(`${SALT}|${playerId}|${questionIdx}`))
+  const out = LETTERS.slice()
   for (let i = out.length - 1; i > 0; i--) {
     const j = Math.floor(next() * (i + 1))
     ;[out[i], out[j]] = [out[j], out[i]]
   }
   return out
 }
-
-// App-facing shape (unchanged from before): { id, text, options: {A,B,C,D}, correct: 'A'|'B'|'C'|'D', time }
-export const questions = RAW.map(q => {
-  const order   = seededShuffle(q.options.map((_, i) => i), SHUFFLE_SEED * 31 + q.id)
-  const options = {}
-  let correct   = 'A'
-  order.forEach((origIdx, slot) => {
-    options[LETTERS[slot]] = q.options[origIdx]
-    if (origIdx === q.correctIndex) correct = LETTERS[slot]
-  })
-  return { id: q.id, text: q.text, options, correct, time: q.time }
-})

@@ -1,14 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { questions } from '../questions'
-import { T, tint } from '../brand'
-
-const ANS_COLORS = T.ans
-const DIFF_COLORS = {
-  Easy:   { bg: tint(T.green, 0.12),  color: T.green },
-  Medium: { bg: tint(T.orange, 0.12), color: T.orange },
-  Hard:   { bg: tint(T.red, 0.12),    color: T.red }
-}
+import { questions, optionOrder } from '../questions'
+import { T, SLOTS, tint } from '../brand'
+import { Shape, TopicTag } from './ui'
 
 function CircularTimer({ totalTime, questionStartTime }) {
   const R = 58, CIRC = 2 * Math.PI * R
@@ -23,10 +17,9 @@ function CircularTimer({ totalTime, questionStartTime }) {
     setUrgent(false)
 
     const update = () => {
-      const elapsed    = (Date.now() - questionStartTime) / 1000
-      const remaining  = Math.max(0, totalTime - elapsed)
-      const p          = remaining / totalTime
-      setProgress(p)
+      const elapsed   = (Date.now() - questionStartTime) / 1000
+      const remaining = Math.max(0, totalTime - elapsed)
+      setProgress(remaining / totalTime)
       setDisplaySecs(Math.ceil(remaining))
       setUrgent(remaining <= 10 && remaining > 0)
       rafRef.current = requestAnimationFrame(update)
@@ -35,54 +28,55 @@ function CircularTimer({ totalTime, questionStartTime }) {
     return () => cancelAnimationFrame(rafRef.current)
   }, [totalTime, questionStartTime])
 
-  const color      = progress > 0.5 ? T.teal : progress > 0.25 ? T.orange : T.red
+  const color      = progress > 0.5 ? T.secondary : progress > 0.25 ? T.primary : T.wrong
   const dashoffset = CIRC * (1 - progress)
   const glowSize   = Math.round((1 - progress) * 28)
 
   return (
     <motion.div
+      className="timer"
       animate={urgent ? { scale: [1, 1.05, 1] } : { scale: 1 }}
       transition={urgent ? { duration: 0.7, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
-      style={{ position: 'relative', width: 140, height: 140, flexShrink: 0 }}
     >
       <div style={{
         position: 'absolute', inset: -6, borderRadius: '50%',
-        boxShadow: `0 0 ${glowSize}px ${color}55`,
-        transition: 'box-shadow 0.4s ease'
+        boxShadow: `0 0 ${glowSize}px ${color}66`, transition: 'box-shadow 0.4s ease'
       }} />
-      <svg width="140" height="140" viewBox="0 0 140 140">
-        <circle cx="70" cy="70" r={R} fill={T.card} />
-        <circle cx="70" cy="70" r={R} fill="none" stroke={T.line} strokeWidth="8" />
+      <svg viewBox="0 0 140 140" aria-hidden="true">
+        <circle cx="70" cy="70" r={R} fill={T.panel} />
+        <circle cx="70" cy="70" r={R} fill="none" stroke={T.line2} strokeWidth="8" />
         <circle
           cx="70" cy="70" r={R} fill="none"
           stroke={color} strokeWidth="8" strokeLinecap="round"
           strokeDasharray={CIRC} strokeDashoffset={dashoffset}
           transform="rotate(-90 70 70)"
-          style={{ transition: 'stroke-dashoffset 0.05s linear, stroke 0.4s ease', filter: `drop-shadow(0 0 5px ${color}80)` }}
+          style={{ transition: 'stroke-dashoffset 0.05s linear, stroke 0.4s ease', filter: `drop-shadow(0 0 5px ${color}99)` }}
         />
       </svg>
-      <div style={{
-        position: 'absolute', inset: 0,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
-      }}>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <motion.span
           key={displaySecs}
+          className="timer-num"
           initial={{ scale: 1.25, opacity: 0.6 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.18, ease: 'easeOut' }}
-          style={{ fontSize: 36, fontWeight: 900, color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}
+          style={{ fontWeight: 800, color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}
         >
           {displaySecs}
         </motion.span>
-        <span style={{ fontSize: '0.65rem', color: T.ink3, fontWeight: 600, letterSpacing: '0.06em', marginTop: 2 }}>SEC</span>
+        <span style={{ fontSize: '0.62rem', color: T.text3, fontWeight: 600, letterSpacing: '0.08em', marginTop: 2 }}>SEC</span>
       </div>
     </motion.div>
   )
 }
 
-export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
-  const q           = questions[gameState.currentQuestion]
-  const [selected, setSelected] = useState(null)
+export default function QuestionScreen({ gameState, playerId, onAnswer, onTimeout }) {
+  const cur = gameState.currentQuestion
+  const q   = questions[cur]
+  // This player's own layout: canonical letters (A–D) in slot order
+  const order = useMemo(() => optionOrder(playerId, cur), [playerId, cur])
+
+  const [selected, setSelected] = useState(null)   // canonical letter
   const [timeUp, setTimeUp]     = useState(false)
   const [fastZone, setFastZone] = useState(true)
   const lockedRef    = useRef(false)
@@ -90,12 +84,12 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
   const timeUpRafRef = useRef()
 
   useEffect(() => {
-    lockedRef.current  = false
+    lockedRef.current   = false
     fastZoneRef.current = true
     setSelected(null)
     setTimeUp(false)
     setFastZone(true)
-  }, [gameState.currentQuestion])
+  }, [cur])
 
   useEffect(() => {
     cancelAnimationFrame(timeUpRafRef.current)
@@ -115,7 +109,7 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
     }
     timeUpRafRef.current = requestAnimationFrame(check)
     return () => cancelAnimationFrame(timeUpRafRef.current)
-  }, [gameState.currentQuestion, gameState.questionStartTime, q.time, onTimeout])
+  }, [cur, gameState.questionStartTime, q.time, onTimeout])
 
   const handleSelect = useCallback((letter) => {
     if (selected || lockedRef.current) return
@@ -124,33 +118,26 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
     onAnswer(letter)
   }, [selected, onAnswer])
 
-  const diff = q.difficulty ? (DIFF_COLORS[q.difficulty] || DIFF_COLORS.Easy) : null
-
   return (
     <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', flexDirection: 'column' }}>
 
       {/* Top bar */}
       <div style={{
-        padding: '16px 20px',
+        padding: '14px 18px', gap: 10,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         borderBottom: `1px solid ${T.line}`
       }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ background: tint(T.teal, 0.12), color: T.teal, padding: '6px 14px', borderRadius: 20, fontSize: '0.85rem', fontWeight: 800 }}>
-            Q{gameState.currentQuestion + 1}/{questions.length}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', minWidth: 0 }}>
+          <div style={{ background: tint(T.primary, 0.16), color: T.primary, padding: '6px 14px', borderRadius: 20, fontSize: '0.85rem', fontWeight: 700 }}>
+            Q{cur + 1}/{questions.length}
           </div>
-          {diff && (
-            <div style={{ background: diff.bg, color: diff.color, padding: '6px 12px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700 }}>
-              {q.difficulty.toUpperCase()}
-            </div>
-          )}
+          <TopicTag topic={q.topic} />
         </div>
-        {/* Progress dots */}
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} aria-hidden="true">
           {questions.map((_, i) => (
             <div key={i} style={{
-              width: 6, height: 6, borderRadius: '50%',
-              background: i < gameState.currentQuestion ? T.teal : i === gameState.currentQuestion ? T.orange : T.line2,
+              width: 7, height: 7, borderRadius: '50%',
+              background: i < cur ? T.secondary : i === cur ? T.primary : T.line2,
               transition: 'background 0.3s'
             }} />
           ))}
@@ -158,24 +145,24 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px 20px', maxWidth: 680, margin: '0 auto', width: '100%' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '22px 18px 28px', maxWidth: 780, margin: '0 auto', width: '100%' }}>
 
-        {/* Timer + Question */}
-        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', marginBottom: 28 }}>
+        {/* Timer + question */}
+        <div className="q-head" style={{ marginBottom: 22 }}>
           <CircularTimer totalTime={q.time} questionStartTime={gameState.questionStartTime} />
           <motion.p
+            className="q-text"
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-            style={{ flex: 1, fontSize: 'clamp(1.05rem, 2.5vw, 1.35rem)', fontWeight: 800, color: T.ink, lineHeight: 1.45, paddingTop: 8 }}
+            style={{ flex: 1, fontWeight: 700, color: T.text, lineHeight: 1.4 }}
           >
             {q.text}
           </motion.p>
         </div>
 
         {/* Scoring hint */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Fast zone badge — switches at 15s */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
           <motion.div
             key={fastZone ? 'fast' : 'slow'}
             initial={{ scale: 0.88, opacity: 0 }}
@@ -184,34 +171,29 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
             style={{
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '5px 12px', borderRadius: 20,
-              background: fastZone ? tint(T.green, 0.12) : tint(T.orange, 0.10),
-              border: `1px solid ${fastZone ? tint(T.green, 0.35) : tint(T.orange, 0.30)}`
+              background: fastZone ? tint(T.correct, 0.14) : tint(T.primary, 0.12),
+              border: `1px solid ${fastZone ? tint(T.correct, 0.4) : tint(T.primary, 0.35)}`
             }}
           >
             {fastZone && <span style={{ fontSize: '0.82rem' }}>⚡</span>}
-            <span style={{
-              color: fastZone ? T.green : T.orange,
-              fontWeight: 900, fontSize: '0.88rem'
-            }}>
+            <span style={{ color: fastZone ? T.correct : T.primary, fontWeight: 800, fontSize: '0.88rem' }}>
               {fastZone ? '+5' : '+3'}
             </span>
-            <span style={{ color: T.ink3, fontSize: '0.72rem', fontWeight: 500 }}>
+            <span style={{ color: T.text3, fontSize: '0.72rem', fontWeight: 500 }}>
               {fastZone ? 'correct · first 15s' : 'correct · after 15s'}
             </span>
           </motion.div>
-          {/* Wrong */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20, background: T.fill, border: `1px solid ${T.line}` }}>
-            <span style={{ color: T.ink2, fontWeight: 800, fontSize: '0.8rem' }}>0</span>
-            <span style={{ color: T.ink3, fontSize: '0.72rem', fontWeight: 500 }}>wrong</span>
+            <span style={{ color: T.text2, fontWeight: 700, fontSize: '0.8rem' }}>0</span>
+            <span style={{ color: T.text3, fontSize: '0.72rem', fontWeight: 500 }}>wrong</span>
           </div>
-          {/* No answer */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20, background: T.fill, border: `1px solid ${T.line}` }}>
-            <span style={{ color: T.red, fontWeight: 800, fontSize: '0.8rem' }}>−1</span>
-            <span style={{ color: T.ink3, fontSize: '0.72rem', fontWeight: 500 }}>no answer</span>
+            <span style={{ color: T.wrongText, fontWeight: 700, fontSize: '0.8rem' }}>−1</span>
+            <span style={{ color: T.text3, fontSize: '0.72rem', fontWeight: 500 }}>no answer</span>
           </div>
         </div>
 
-        {/* Time's up — hide options and show waiting screen */}
+        {/* Time's up — options hidden, wait for the host */}
         {timeUp && !selected && (
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: 10 }}
@@ -219,8 +201,7 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
             transition={{ type: 'spring', stiffness: 280, damping: 22 }}
             style={{
               padding: '28px 20px', borderRadius: 16, textAlign: 'center',
-              background: tint(T.red, 0.07),
-              border: `1px solid ${tint(T.red, 0.22)}`
+              background: tint(T.wrong, 0.10), border: `1px solid ${tint(T.wrong, 0.32)}`
             }}
           >
             <motion.div
@@ -228,75 +209,74 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
               transition={{ duration: 0.5, delay: 0.1 }}
               style={{ fontSize: '2.4rem', marginBottom: 10 }}
             >⏰</motion.div>
-            <div style={{ color: T.red, fontWeight: 800, fontSize: '1.05rem', marginBottom: 6 }}>
-              Time&apos;s up!
-            </div>
-            <div style={{ color: T.ink3, fontSize: '0.85rem' }}>
-              Waiting for the next question...
-            </div>
+            <div style={{ color: T.wrongText, fontWeight: 700, fontSize: '1.05rem', marginBottom: 6 }}>Time&apos;s up!</div>
+            <div style={{ color: T.text3, fontSize: '0.85rem' }}>Waiting for the next question...</div>
           </motion.div>
         )}
 
-        {/* Answer grid — hidden once time expires (unless already answered) */}
+        {/* Answer grid — this player's shuffled order; colour + shape belong to the slot */}
         {(!timeUp || selected) && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {Object.entries(q.options).map(([letter, text], i) => {
-            const isSelected = selected === letter
-            const isDimmed   = selected && !isSelected
+          <div className="answers-grid">
+            {order.map((letter, slot) => {
+              const s          = SLOTS[slot]
+              const isSelected = selected === letter
+              const isDimmed   = !!selected && !isSelected
 
-            return (
-              <motion.button
-                key={letter}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{
-                  opacity: isDimmed ? 0.28 : 1,
-                  y: 0,
-                  scale: isSelected ? [1, 0.93, 1.06, 1] : 1,
-                }}
-                transition={
-                  isSelected
-                    ? { scale: { duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }, opacity: { duration: 0.1 } }
-                    : isDimmed
-                    ? { duration: 0.3, ease: 'easeOut', delay: 0.05 }
-                    : { delay: 0.15 + i * 0.07, type: 'spring', stiffness: 260, damping: 22 }
-                }
-                whileHover={!selected ? { scale: 1.04, y: -3 } : {}}
-                whileTap={!selected ? { scale: 0.95 } : {}}
-                onClick={() => handleSelect(letter)}
-                disabled={!!selected}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '16px 18px', borderRadius: 16,
-                  background: ANS_COLORS[letter],
-                  border: isSelected ? '2px solid rgba(255,255,255,0.9)' : '2px solid transparent',
-                  color: '#fff', fontFamily: 'inherit',
-                  fontSize: '0.95rem', fontWeight: 600,
-                  cursor: selected ? 'default' : 'pointer',
-                  textAlign: 'left', lineHeight: 1.35,
-                  filter: isDimmed ? 'blur(1.5px)' : 'none',
-                  boxShadow: isSelected
-                    ? `0 0 28px ${ANS_COLORS[letter]}66, 0 4px 16px rgba(28,74,87,0.22)`
-                    : '0 4px 16px rgba(28,74,87,0.16)',
-                  transition: 'filter 0.3s ease, border-color 0.15s, box-shadow 0.2s'
-                }}
-              >
-                <motion.span
-                  animate={isSelected ? { rotate: [0, -8, 8, 0], scale: [1, 1.2, 1] } : { rotate: 0, scale: 1 }}
-                  transition={{ duration: 0.3 }}
+              return (
+                <motion.button
+                  key={letter}
+                  type="button"
+                  className="answer-btn"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{
+                    opacity: isDimmed ? 0.28 : 1,
+                    y: 0,
+                    scale: isSelected ? [1, 0.93, 1.06, 1] : 1,
+                  }}
+                  transition={
+                    isSelected
+                      ? { scale: { duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }, opacity: { duration: 0.1 } }
+                      : isDimmed
+                      ? { duration: 0.3, ease: 'easeOut', delay: 0.05 }
+                      : { delay: 0.15 + slot * 0.07, type: 'spring', stiffness: 260, damping: 22 }
+                  }
+                  whileHover={!selected ? { scale: 1.03, y: -3 } : {}}
+                  whileTap={!selected ? { scale: 0.96 } : {}}
+                  onClick={() => handleSelect(letter)}
+                  disabled={!!selected}
+                  aria-label={`${s.name}: ${q.options[letter]}`}
                   style={{
-                    width: 32, height: 32, minWidth: 32, borderRadius: 8,
-                    background: 'rgba(255,255,255,0.2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 800, fontSize: '0.9rem', flexShrink: 0
+                    display: 'flex', alignItems: 'center', gap: 14,
+                    padding: '14px 16px', borderRadius: 16,
+                    background: s.color, color: T.onAccent,
+                    border: isSelected ? '3px solid #FFFFFF' : '3px solid transparent',
+                    fontFamily: 'inherit', fontSize: '1rem', fontWeight: 600,
+                    cursor: selected ? 'default' : 'pointer',
+                    textAlign: 'left', lineHeight: 1.35,
+                    filter: isDimmed ? 'blur(1.5px)' : 'none',
+                    boxShadow: isSelected
+                      ? `0 0 28px ${s.color}88, 0 6px 18px rgba(0,0,0,0.35)`
+                      : '0 6px 18px rgba(0,0,0,0.25)',
+                    transition: 'filter 0.3s ease, border-color 0.15s, box-shadow 0.2s'
                   }}
                 >
-                  {isSelected ? '✓' : letter}
-                </motion.span>
-                <span>{text}</span>
-              </motion.button>
-            )
-          })}
-        </div>
+                  <motion.span
+                    animate={isSelected ? { rotate: [0, -8, 8, 0], scale: [1, 1.2, 1] } : { rotate: 0, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    style={{
+                      width: 40, height: 40, minWidth: 40, borderRadius: 10,
+                      background: 'rgba(15,23,32,0.14)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontWeight: 800, fontSize: '1.15rem', flexShrink: 0
+                    }}
+                  >
+                    {isSelected ? '✓' : <Shape shape={s.shape} size={20} color={T.onAccent} />}
+                  </motion.span>
+                  <span>{q.options[letter]}</span>
+                </motion.button>
+              )
+            })}
+          </div>
         )}
 
         {/* Locked toast */}
@@ -308,20 +288,13 @@ export default function QuestionScreen({ gameState, onAnswer, onTimeout }) {
               exit={{ opacity: 0, y: 10 }}
               transition={{ type: 'spring', stiffness: 300, damping: 22 }}
               style={{
-                marginTop: 20, padding: '14px 20px',
-                background: tint(T.green, 0.10),
-                border: `1px solid ${tint(T.green, 0.30)}`,
-                borderRadius: 14, textAlign: 'center',
-                color: T.green, fontWeight: 700, fontSize: '0.95rem',
+                marginTop: 18, padding: '14px 20px', borderRadius: 14, textAlign: 'center',
+                background: tint(T.correct, 0.12), border: `1px solid ${tint(T.correct, 0.35)}`,
+                color: T.correct, fontWeight: 600, fontSize: '0.95rem',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
               }}
             >
-              <motion.span
-                animate={{ rotate: [0, 12, -8, 0] }}
-                transition={{ duration: 0.4, delay: 0.1 }}
-              >
-                ✅
-              </motion.span>
+              <motion.span animate={{ rotate: [0, 12, -8, 0] }} transition={{ duration: 0.4, delay: 0.1 }}>✅</motion.span>
               Locked in! Waiting for the next question...
             </motion.div>
           )}

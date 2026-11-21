@@ -1,25 +1,13 @@
 :root {
-  /* Growisto palette — mirrors src/brand.js */
-  --teal: #367588;
-  --dark-teal: #1C4A57;
-  --orange: #E35D34;
-  --powder-blue: #B8DBD9;
-  --purple: #7B5EA7;
-  --white: #FFFFFF;
-  --off-white: #F2F0EB;
-  --ink: #1C4A57;
-  --line: rgba(28,74,87,0.10);
-  --success: #2F855A;
-  --error: #C53030;
-  --gold: #B8860B;
-  --silver: #8E9AAF;
-  --bronze: #B5722F;
-
-  /* Answer button colors */
-  --ans-a: #367588;
-  --ans-b: #1C4A57;
-  --ans-c: #E35D34;
-  --ans-d: #7B5EA7;
+  /* Amazon DSP quiz palette — mirrors src/brand.js */
+  --bg: #232F3E;
+  --panel: #2B3A4A;
+  --primary: #FF9900;
+  --secondary: #00A8A8;
+  --text: #FFFFFF;
+  --text2: #D5DBDB;
+  --correct: #2ECC71;
+  --wrong: #E74C3C;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,21 +18,65 @@ html, body, #root {
 }
 
 body {
-  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  background: var(--off-white);
-  color: var(--ink);
+  background: var(--bg);
+  color: var(--text);
 }
+
+button, input { font-family: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: rgba(28,74,87,0.05); }
-::-webkit-scrollbar-thumb { background: rgba(28,74,87,0.18); border-radius: 3px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
 
-/* Selection */
-::selection { background: rgba(54,117,136,0.25); }
+::selection { background: rgba(255,153,0,0.35); }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
-/* Focus ring */
-:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+/* ── Layout helpers: the responsive bits inline styles can't express ── */
+
+.landing-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+
+.q-head { display: flex; gap: 22px; align-items: center; }
+.q-text { font-size: clamp(1.15rem, 2.6vw, 1.6rem); }
+
+.timer { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
+.timer svg { display: block; width: 100%; height: 100%; }
+.timer-num { font-size: 36px; }
+
+.answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.answer-btn { min-height: 88px; }
+
+.lobby-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; align-items: stretch; }
+
+/* Funnel strip: chevrons that shrink left → right */
+.funnel { display: flex; align-items: center; justify-content: center; }
+.funnel-seg {
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 24px 0 28px; margin-left: -8px;
+  color: #fff; font-weight: 600; font-size: 0.72rem;
+  letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 14px 50%);
+}
+.funnel-seg:first-child {
+  margin-left: 0; padding-left: 20px;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+}
+
+@media (max-width: 860px) {
+  .lobby-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .q-head { gap: 14px; }
+  .timer { width: 88px; height: 88px; }
+  .timer-num { font-size: 26px; }
+  .answers-grid { grid-template-columns: 1fr; gap: 10px; }
+  .answer-btn { min-height: 66px; }
+  .funnel-seg { font-size: 0.6rem; padding: 0 16px 0 21px; }
+  .funnel-seg:first-child { padding-left: 14px; }
+}

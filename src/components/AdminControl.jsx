@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { questions } from '../questions'
+import { questions, LETTERS } from '../questions'
 import { T, APP_NAME, AVATAR_COLORS, tint } from '../brand'
+import { Logo, TopicTag } from './ui'
 
-const ANS_COLORS  = T.ans
 const RANK_COLORS = [T.gold, T.silver, T.bronze]
 
 function getInitial(name) { return (name || '?').charAt(0).toUpperCase() }
@@ -32,93 +32,77 @@ export default function AdminControl({ gameState, players, onNextQuestion, onSho
   const canAdvance      = answeredCount > 0 || timerExpired
   const answerProgress  = totalPlayers > 0 ? (answeredCount / totalPlayers) * 100 : 0
 
+  // Answers are stored by canonical letter, so this is correct whatever order each phone showed
   const distribution = { A: 0, B: 0, C: 0, D: 0 }
   answeredPlayers.forEach(p => {
     const ans = p.answers[gameState.currentQuestion]?.answer
     if (ans && ans in distribution) distribution[ans]++
   })
 
-  const timerColor = timeRemaining > totalTime * 0.5 ? T.green : timeRemaining > totalTime * 0.25 ? T.orange : T.red
+  const timerColor = timeRemaining > totalTime * 0.5 ? T.correct : timeRemaining > totalTime * 0.25 ? T.primary : T.wrong
 
-  // Live leaderboard: sorted by totalScore desc
   const rankedPlayers = Object.entries(players)
     .map(([id, p]) => ({ id, name: p.name, score: p.totalScore || 0, answered: !!p.answers?.[gameState.currentQuestion] }))
     .sort((a, b) => b.score - a.score)
 
-  const sectionLabel = { color: T.ink3, fontSize: '0.67rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7 }
-  const card = { background: T.card, borderRadius: 12, border: `1.5px solid ${T.line}`, boxShadow: T.shadowCard }
+  const sectionLabel = { color: T.text3, fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 7 }
+  const card = { background: T.panel, borderRadius: 14, border: `1px solid ${T.line}`, boxShadow: T.shadowCard }
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, display: 'flex' }}>
 
       {/* ── Left sidebar: players status ─── */}
       <div style={{
-        width: 220, minWidth: 220, background: T.card,
-        borderRight: `1px solid ${T.line}`,
-        display: 'flex', flexDirection: 'column', padding: '20px 14px',
-        overflow: 'hidden'
+        width: 220, minWidth: 220, background: T.panel, borderRight: `1px solid ${T.line}`,
+        display: 'flex', flexDirection: 'column', padding: '18px 14px', overflow: 'hidden'
       }}>
-        {/* Back + title */}
-        <div style={{ marginBottom: 20, paddingBottom: 14, borderBottom: `1px solid ${T.line}` }}>
+        <div style={{ marginBottom: 18, paddingBottom: 14, borderBottom: `1px solid ${T.line}` }}>
           <button
             onClick={onBackToSessions}
-            style={{
-              background: 'none', border: 'none', color: T.ink3,
-              fontSize: '0.73rem', fontWeight: 600, fontFamily: 'inherit',
-              cursor: 'pointer', marginBottom: 10, padding: 0,
-              display: 'flex', alignItems: 'center', gap: 4
-            }}
+            style={{ background: 'none', border: 'none', color: T.text3, fontSize: '0.75rem', fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer', marginBottom: 12, padding: 0 }}
           >
             ← Sessions
           </button>
-          <div style={{ fontSize: '1.1rem', marginBottom: 5 }}>⚡</div>
-          <h3 style={{ color: T.ink, fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.25, marginBottom: 2 }}>{APP_NAME}</h3>
-          <p style={{ color: T.ink3, fontSize: '0.72rem' }}>Admin Control</p>
+          <div style={{ marginBottom: 8 }}><Logo size={22} /></div>
+          <h3 style={{ color: T.text, fontWeight: 700, fontSize: '0.88rem', lineHeight: 1.3, marginBottom: 2 }}>{APP_NAME}</h3>
+          <p style={{ color: T.text3, fontSize: '0.72rem' }}>Host control</p>
         </div>
 
-        {/* Progress segments */}
         <div style={{ marginBottom: 18 }}>
           <p style={sectionLabel}>Progress</p>
           <div style={{ display: 'flex', gap: 3 }}>
             {questions.map((_, i) => (
               <div key={i} style={{
-                height: 4, flex: 1, borderRadius: 3,
-                background: i < gameState.currentQuestion ? T.teal : i === gameState.currentQuestion ? T.orange : T.fill2,
+                height: 5, flex: 1, borderRadius: 3,
+                background: i < gameState.currentQuestion ? T.secondary : i === gameState.currentQuestion ? T.primary : T.fill2,
                 transition: 'background 0.3s'
               }} />
             ))}
           </div>
-          <p style={{ color: T.ink3, fontSize: '0.72rem', marginTop: 5 }}>
-            Q{gameState.currentQuestion + 1} of {questions.length}
-          </p>
+          <p style={{ color: T.text3, fontSize: '0.72rem', marginTop: 5 }}>Q{gameState.currentQuestion + 1} of {questions.length}</p>
         </div>
 
-        {/* Who answered */}
         <p style={sectionLabel}>Players ({totalPlayers})</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, overflowY: 'auto', flex: 1 }}>
           {playerList.map((p, i) => {
             const answered = !!p.answers?.[gameState.currentQuestion]
             return (
               <div key={p.name} style={{
-                display: 'flex', alignItems: 'center', gap: 7,
-                padding: '7px 9px', borderRadius: 8,
-                background: answered ? tint(T.green, 0.08) : T.fill
+                display: 'flex', alignItems: 'center', gap: 7, padding: '7px 9px', borderRadius: 8,
+                background: answered ? tint(T.correct, 0.10) : T.fill
               }}>
                 <div style={{
                   width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
                   background: AVATAR_COLORS[i % AVATAR_COLORS.length],
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.65rem', fontWeight: 800, color: '#fff'
+                  fontSize: '0.65rem', fontWeight: 700, color: T.onAccent
                 }}>
                   {getInitial(p.name)}
                 </div>
-                <span style={{ color: T.ink2, fontSize: '0.77rem', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ color: T.text2, fontSize: '0.78rem', fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.name}
                 </span>
-                <div style={{
-                  width: 7, height: 7, borderRadius: '50%',
-                  background: answered ? T.green : T.line2
-                }} />
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: answered ? T.correct : T.line2 }} />
               </div>
             )
           })}
@@ -126,84 +110,70 @@ export default function AdminControl({ gameState, players, onNextQuestion, onSho
       </div>
 
       {/* ── Main content ────────────────────── */}
-      <div style={{ flex: 1, padding: '24px 20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ flex: 1, padding: '22px 22px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-        {/* Top: Q number + timer */}
+        {/* Q number + timer */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <span style={{ background: tint(T.teal, 0.12), color: T.teal, padding: '6px 14px', borderRadius: 20, fontSize: '0.85rem', fontWeight: 800 }}>
-              Q{gameState.currentQuestion + 1}/{questions.length}
-            </span>
-            {q.difficulty && (
-              <span style={{
-                background: q.difficulty === 'Easy' ? tint(T.green, 0.12) : q.difficulty === 'Hard' ? tint(T.red, 0.12) : tint(T.orange, 0.12),
-                color: q.difficulty === 'Easy' ? T.green : q.difficulty === 'Hard' ? T.red : T.orange,
-                padding: '6px 12px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700
-              }}>
-                {q.difficulty.toUpperCase()}
-              </span>
-            )}
-          </div>
+          <span style={{ background: tint(T.primary, 0.16), color: T.primary, padding: '6px 14px', borderRadius: 20, fontSize: '0.88rem', fontWeight: 700 }}>
+            Question {gameState.currentQuestion + 1} of {questions.length}
+          </span>
           <div style={{
-            background: timerExpired ? tint(T.red, 0.10) : T.card,
-            border: `1.5px solid ${timerColor}55`, borderRadius: 12, padding: '7px 16px',
-            color: timerColor, fontWeight: 800, fontSize: '1.3rem',
+            background: timerExpired ? tint(T.wrong, 0.14) : T.panel,
+            border: `1.5px solid ${timerColor}66`, borderRadius: 12, padding: '6px 18px',
+            color: timerColor, fontWeight: 800, fontSize: '1.4rem',
             fontVariantNumeric: 'tabular-nums', transition: 'color 0.4s, border-color 0.4s'
           }}>
             {timerExpired ? '⏰ Time up' : `${Math.ceil(timeRemaining)}s`}
           </div>
         </div>
 
-        {/* Question card (no answer highlight) */}
+        {/* Question card — topic in the header, options in canonical order (no answer highlight) */}
         <div style={{ ...card, borderRadius: 16, padding: '18px 20px' }}>
-          <p style={{ color: T.ink, fontSize: 'clamp(0.95rem, 1.8vw, 1.15rem)', fontWeight: 700, lineHeight: 1.5, marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
+            <TopicTag topic={q.topic} />
+            <span style={{ color: T.text3, fontSize: '0.74rem' }}>🔀 Options are shuffled on every phone</span>
+          </div>
+          <p style={{ color: T.text, fontSize: 'clamp(1.05rem, 2vw, 1.4rem)', fontWeight: 700, lineHeight: 1.45, marginBottom: 14 }}>
             {q.text}
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
-            {Object.entries(q.options).map(([letter, text]) => (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {LETTERS.map((letter, i) => (
               <div key={letter} style={{
-                display: 'flex', gap: 8, alignItems: 'center',
-                padding: '8px 11px', borderRadius: 8,
-                background: T.fill,
-                border: `1px solid ${T.line}`
+                display: 'flex', gap: 10, alignItems: 'center',
+                padding: '10px 12px', borderRadius: 10, background: T.fill, border: `1px solid ${T.line}`
               }}>
                 <span style={{
-                  width: 22, height: 22, borderRadius: 5, flexShrink: 0,
-                  background: ANS_COLORS[letter],
+                  width: 24, height: 24, borderRadius: 6, flexShrink: 0, background: T.fill2,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 800, fontSize: '0.73rem', color: '#fff'
+                  fontWeight: 700, fontSize: '0.75rem', color: T.text2
                 }}>
-                  {letter}
+                  {i + 1}
                 </span>
-                <span style={{ color: T.ink2, fontSize: '0.8rem', fontWeight: 600 }}>{text}</span>
+                <span style={{ color: T.text2, fontSize: '0.88rem', fontWeight: 500 }}>{q.options[letter]}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Stats row */}
+        {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div style={{ ...card, padding: '14px 18px' }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: T.green, fontVariantNumeric: 'tabular-nums' }}>{answeredCount}</div>
-            <div style={{ color: T.ink3, fontSize: '0.75rem', fontWeight: 600, marginTop: 2 }}>Answered</div>
+            <div style={{ fontSize: '1.9rem', fontWeight: 800, color: T.correct, fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>{answeredCount}</div>
+            <div style={{ color: T.text3, fontSize: '0.76rem', fontWeight: 500, marginTop: 2 }}>Answered</div>
           </div>
           <div style={{ ...card, padding: '14px 18px' }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: T.orange, fontVariantNumeric: 'tabular-nums' }}>{totalPlayers - answeredCount}</div>
-            <div style={{ color: T.ink3, fontSize: '0.75rem', fontWeight: 600, marginTop: 2 }}>Waiting</div>
+            <div style={{ fontSize: '1.9rem', fontWeight: 800, color: T.primary, fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>{totalPlayers - answeredCount}</div>
+            <div style={{ color: T.text3, fontSize: '0.76rem', fontWeight: 500, marginTop: 2 }}>Waiting</div>
           </div>
         </div>
 
-        {/* Answer progress + distribution */}
+        {/* Progress + distribution */}
         <div style={{ ...card, padding: '16px 18px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7 }}>
-            <span style={{ color: T.ink2, fontSize: '0.78rem', fontWeight: 600 }}>
-              {answeredCount}/{totalPlayers} answered
-            </span>
-            <span style={{ color: T.teal, fontSize: '0.78rem', fontWeight: 800 }}>
-              {Math.round(answerProgress)}%
-            </span>
+            <span style={{ color: T.text2, fontSize: '0.8rem', fontWeight: 500 }}>{answeredCount}/{totalPlayers} answered</span>
+            <span style={{ color: T.primary, fontSize: '0.8rem', fontWeight: 700 }}>{Math.round(answerProgress)}%</span>
           </div>
-          <div style={{ height: 7, background: T.fill2, borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
+          <div style={{ height: 8, background: T.fill2, borderRadius: 4, overflow: 'hidden', marginBottom: answeredCount > 0 ? 14 : 0 }}>
             <motion.div
               animate={{ width: `${answerProgress}%` }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -211,27 +181,25 @@ export default function AdminControl({ gameState, players, onNextQuestion, onSho
             />
           </div>
           {answeredCount > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              {Object.entries(distribution).map(([letter, count]) => {
-                const pct = answeredCount > 0 ? (count / answeredCount) * 100 : 0
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              {LETTERS.map((letter, i) => {
+                const count = distribution[letter]
+                const pct   = (count / answeredCount) * 100
                 return (
-                  <div key={letter} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{
-                      width: 20, height: 20, borderRadius: 4, flexShrink: 0,
-                      background: ANS_COLORS[letter],
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 800, fontSize: '0.7rem', color: '#fff'
-                    }}>
-                      {letter}
-                    </span>
-                    <div style={{ flex: 1, height: 16, background: T.fill, borderRadius: 3, overflow: 'hidden' }}>
+                  <div key={letter}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 4 }}>
+                      <span style={{ color: T.text2, fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ color: T.text3, fontWeight: 700, marginRight: 7 }}>{i + 1}</span>{q.options[letter]}
+                      </span>
+                      <span style={{ color: T.text, fontWeight: 700, fontSize: '0.8rem', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
+                    </div>
+                    <div style={{ height: 10, background: T.fill, borderRadius: 5, overflow: 'hidden' }}>
                       <motion.div
                         animate={{ width: `${pct}%` }}
                         transition={{ duration: 0.4, ease: 'easeOut' }}
-                        style={{ height: '100%', background: ANS_COLORS[letter], borderRadius: 3, opacity: 0.85 }}
+                        style={{ height: '100%', background: T.secondary, borderRadius: 5 }}
                       />
                     </div>
-                    <span style={{ width: 16, fontWeight: 700, color: T.ink2, fontSize: '0.78rem', textAlign: 'right' }}>{count}</span>
                   </div>
                 )
               })}
@@ -239,69 +207,58 @@ export default function AdminControl({ gameState, players, onNextQuestion, onSho
           )}
         </div>
 
-        {/* Next button */}
+        {/* Next */}
         <motion.button
-          whileHover={canAdvance ? { scale: 1.02 } : {}}
-          whileTap={canAdvance ? { scale: 0.97 } : {}}
+          whileHover={canAdvance ? { scale: 1.01 } : {}}
+          whileTap={canAdvance ? { scale: 0.98 } : {}}
           onClick={isLastQuestion ? onShowLeaderboard : onNextQuestion}
           disabled={!canAdvance}
-          animate={canAdvance ? { boxShadow: ['0 8px 24px rgba(54,117,136,0.20)', '0 8px 32px rgba(54,117,136,0.45)', '0 8px 24px rgba(54,117,136,0.20)'] } : {}}
+          animate={canAdvance ? { boxShadow: ['0 8px 24px rgba(255,153,0,0.18)', '0 8px 32px rgba(255,153,0,0.45)', '0 8px 24px rgba(255,153,0,0.18)'] } : {}}
           transition={{ duration: 2, repeat: Infinity }}
           style={{
-            width: '100%', padding: '16px',
-            borderRadius: 14, border: 'none',
-            background: canAdvance ? T.gradPrimary : T.disabled,
-            color: canAdvance ? '#fff' : T.ink4,
-            fontSize: '1rem', fontWeight: 800, fontFamily: 'inherit',
+            width: '100%', padding: '17px', borderRadius: 14, border: 'none',
+            background: canAdvance ? T.gradPrimary : T.fill2,
+            color: canAdvance ? T.onAccent : T.text4,
+            fontSize: '1.05rem', fontWeight: 700, fontFamily: 'inherit',
             cursor: canAdvance ? 'pointer' : 'not-allowed',
             transition: 'background 0.3s, color 0.3s'
           }}
         >
-          {isLastQuestion ? '🏆 Show Leaderboard' : 'Next Question →'}
+          {isLastQuestion ? '🏆 Show Final Results' : 'Next Question →'}
         </motion.button>
 
         {!canAdvance && (
-          <p style={{ color: T.ink3, textAlign: 'center', fontSize: '0.78rem', marginTop: -8 }}>
-            Waiting for at least 1 answer or timer to expire
+          <p style={{ color: T.text3, textAlign: 'center', fontSize: '0.78rem', marginTop: -6 }}>
+            Waiting for at least 1 answer or the timer to run out
           </p>
         )}
       </div>
 
-      {/* ── Right: Live Leaderboard ──────────── */}
+      {/* ── Right: live standings ──────────── */}
       <div style={{
-        width: 230, minWidth: 230, background: T.card,
-        borderLeft: `1px solid ${T.line}`,
-        display: 'flex', flexDirection: 'column', padding: '20px 14px',
-        overflow: 'hidden'
+        width: 240, minWidth: 240, background: T.panel, borderLeft: `1px solid ${T.line}`,
+        display: 'flex', flexDirection: 'column', padding: '18px 14px', overflow: 'hidden'
       }}>
-        {/* Header */}
-        <div style={{ marginBottom: 16, paddingBottom: 12, borderBottom: `1px solid ${T.line}` }}>
+        <div style={{ marginBottom: 14, paddingBottom: 12, borderBottom: `1px solid ${T.line}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <motion.div
               animate={{ opacity: [1, 0.4, 1] }}
               transition={{ duration: 1.4, repeat: Infinity }}
-              style={{ width: 7, height: 7, borderRadius: '50%', background: T.green, flexShrink: 0 }}
+              style={{ width: 7, height: 7, borderRadius: '50%', background: T.correct, flexShrink: 0 }}
             />
-            <span style={{ color: T.ink, fontWeight: 800, fontSize: '0.9rem' }}>Live Standings</span>
+            <span style={{ color: T.text, fontWeight: 700, fontSize: '0.92rem' }}>Live Standings</span>
           </div>
-          <p style={{ color: T.ink3, fontSize: '0.7rem', marginTop: 4 }}>
-            Updates as players answer
-          </p>
+          <p style={{ color: T.text3, fontSize: '0.7rem', marginTop: 4 }}>Updates as players answer</p>
         </div>
 
-        {/* Ranked list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, overflowY: 'auto', flex: 1 }}>
           <AnimatePresence>
             {rankedPlayers.length === 0 && (
-              <p style={{ color: T.ink3, fontSize: '0.78rem', textAlign: 'center', marginTop: 20 }}>
-                No players yet
-              </p>
+              <p style={{ color: T.text3, fontSize: '0.78rem', textAlign: 'center', marginTop: 20 }}>No players yet</p>
             )}
             {rankedPlayers.map((p, i) => {
               const rank      = i + 1
               const rankColor = RANK_COLORS[i] || null
-              const avatarBg  = AVATAR_COLORS[i % AVATAR_COLORS.length]
-
               return (
                 <motion.div
                   key={p.id}
@@ -311,52 +268,32 @@ export default function AdminControl({ gameState, players, onNextQuestion, onSho
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ type: 'spring', stiffness: 280, damping: 24, delay: i * 0.04 }}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '8px 10px', borderRadius: 10,
-                    background: p.answered ? tint(T.green, 0.07) : T.fill,
-                    border: rankColor ? `1px solid ${rankColor}40` : '1px solid transparent',
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10,
+                    background: p.answered ? tint(T.correct, 0.08) : T.fill,
+                    border: `1px solid ${rankColor ? tint(rankColor, 0.35) : 'transparent'}`,
                     transition: 'background 0.3s'
                   }}
                 >
-                  {/* Rank */}
                   <span style={{
-                    width: 20, textAlign: 'center', flexShrink: 0,
-                    fontWeight: 800,
-                    fontSize: rank <= 3 ? '0.85rem' : '0.7rem',
-                    color: rankColor || T.ink4
+                    width: 20, textAlign: 'center', flexShrink: 0, fontWeight: 700,
+                    fontSize: rank <= 3 ? '0.85rem' : '0.72rem', color: rankColor || T.text3
                   }}>
-                    {rank <= 3 ? ['🥇','🥈','🥉'][i] : `#${rank}`}
+                    {rank <= 3 ? ['🥇', '🥈', '🥉'][i] : `#${rank}`}
                   </span>
-
-                  {/* Avatar */}
                   <div style={{
                     width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                    background: avatarBg,
+                    background: AVATAR_COLORS[i % AVATAR_COLORS.length],
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.65rem', fontWeight: 800, color: '#fff'
+                    fontSize: '0.65rem', fontWeight: 700, color: T.onAccent
                   }}>
                     {getInitial(p.name)}
                   </div>
-
-                  {/* Name */}
-                  <span style={{
-                    flex: 1, color: T.ink, fontWeight: 600, fontSize: '0.78rem',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-                  }}>
+                  <span style={{ flex: 1, color: T.text, fontWeight: 500, fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.name}
                   </span>
-
-                  {/* Score + answered dot */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                    <span style={{
-                      color: rankColor || T.ink, fontWeight: 800, fontSize: '0.82rem',
-                      fontVariantNumeric: 'tabular-nums'
-                    }}>
-                      {p.score}
-                    </span>
-                    {p.answered && (
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: T.green }} />
-                    )}
+                    <span style={{ color: rankColor || T.text, fontWeight: 700, fontSize: '0.84rem', fontVariantNumeric: 'tabular-nums' }}>{p.score}</span>
+                    {p.answered && <div style={{ width: 6, height: 6, borderRadius: '50%', background: T.correct }} />}
                   </div>
                 </motion.div>
               )
@@ -364,14 +301,9 @@ export default function AdminControl({ gameState, players, onNextQuestion, onSho
           </AnimatePresence>
         </div>
 
-        {/* Footer: answered count */}
-        <div style={{
-          marginTop: 12, paddingTop: 12,
-          borderTop: `1px solid ${T.line}`,
-          textAlign: 'center'
-        }}>
-          <span style={{ color: T.ink3, fontSize: '0.7rem' }}>
-            <span style={{ color: T.green, fontWeight: 700 }}>{answeredCount}</span>/{totalPlayers} answered this Q
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}`, textAlign: 'center' }}>
+          <span style={{ color: T.text3, fontSize: '0.72rem' }}>
+            <span style={{ color: T.correct, fontWeight: 700 }}>{answeredCount}</span>/{totalPlayers} answered this question
           </span>
         </div>
       </div>

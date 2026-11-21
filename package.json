@@ -1,17 +1,20 @@
 {
-  "name": "swiggy-quiz",
+  "name": "growisto-dsp-quiz",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/check-questions.mjs",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:questions": "node scripts/check-questions.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.3",
     "firebase": "^10.7.1",
     "framer-motion": "^12.40.0",
+    "qrcode.react": "^4.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
