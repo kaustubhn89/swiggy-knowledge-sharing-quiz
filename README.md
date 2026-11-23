@@ -1,6 +1,6 @@
 # Amazon DSP, from zero: Quiz
 
-**Session 1 knowledge check** · Growisto Amazon Ads team
+**Knowledge check: slides 1 to 28** · Growisto Amazon Ads team
 
 Live multiplayer quiz (host screen + players on phones), built on the same app as
 the Deals, Data & Decisions quiz but deployed separately.
@@ -29,9 +29,10 @@ Answer options are shuffled on every phone, so neighbours can't copy positions.
 ## Editing the questions
 All questions live in **`src/data/dspQuestions.js`** — one object each:
 ```js
-{ "topic": "Audiences", "question": "…", "options": ["…", "…", "…", "…"], "correct": 1, "time": 20 }
+{ "level": "Easy", "topic": "Audiences", "question": "…", "options": ["…", "…", "…", "…"], "correct": 1, "time": 20 }
 ```
-`correct` is the 0-based position of the right answer in `options`. Run `npm run check:questions` to validate;
+`correct` is the 0-based position of the right answer in `options`. `level` is optional ("Easy", "Medium" or
+"Hard") and shows as a small tag next to the topic. Run `npm run check:questions` to validate;
 the build refuses to deploy a malformed list.
 
 ## Tech

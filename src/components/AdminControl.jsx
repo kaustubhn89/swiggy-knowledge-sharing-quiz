@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { questions, LETTERS } from '../questions'
 import { T, APP_NAME, AVATAR_COLORS, tint } from '../brand'
-import { Logo, TopicTag } from './ui'
+import { Logo, TopicTag, LevelTag } from './ui'
 
 const RANK_COLORS = [T.gold, T.silver, T.bronze]
 
@@ -130,7 +130,10 @@ export default function AdminControl({ gameState, players, onNextQuestion, onSho
         {/* Question card — topic in the header, options in canonical order (no answer highlight) */}
         <div style={{ ...card, borderRadius: 16, padding: '18px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
-            <TopicTag topic={q.topic} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <TopicTag topic={q.topic} />
+              <LevelTag level={q.level} />
+            </div>
             <span style={{ color: T.text3, fontSize: '0.74rem' }}>🔀 Options are shuffled on every phone</span>
           </div>
           <p style={{ color: T.text, fontSize: 'clamp(1.05rem, 2vw, 1.4rem)', fontWeight: 700, lineHeight: 1.45, marginBottom: 14 }}>

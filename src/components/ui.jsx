@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { T, APP_NAME, FUNNEL, FOOTER, ORG, LOGO_ICON, tint } from '../brand'
+import { T, APP_NAME, FUNNEL, FOOTER, ORG, LOGO_ICON, LEVELS, tint } from '../brand'
 
 // Kahoot-style answer shapes (decorative; the button text carries the meaning)
 export function Shape({ shape, size = 20, color = 'currentColor' }) {
@@ -76,6 +76,32 @@ export function TopicTag({ topic, small = false }) {
       letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap'
     }}>
       {topic}
+    </span>
+  )
+}
+
+// Difficulty pill shown beside the topic: 1–3 signal bars + the level name,
+// so the meaning never rests on colour alone. Unknown levels render neutral.
+export function LevelTag({ level, small = false }) {
+  if (!level) return null
+  const l = LEVELS[level.toLowerCase()] || { color: T.text2, bars: 0 }
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: small ? '4px 9px' : '6px 11px', borderRadius: 20,
+      background: tint(l.color, 0.12), border: `1px solid ${tint(l.color, 0.4)}`,
+      color: l.color, fontSize: small ? '0.68rem' : '0.74rem', fontWeight: 700,
+      letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap'
+    }}>
+      {l.bars > 0 && (
+        <svg width="12" height="10" viewBox="0 0 12 10" aria-hidden="true" focusable="false" style={{ display: 'block', flexShrink: 0 }}>
+          {[0, 1, 2].map(i => (
+            <rect key={i} x={i * 4.5} y={6 - i * 3} width="3" height={4 + i * 3} rx="1"
+              fill={i < l.bars ? l.color : tint(l.color, 0.3)} />
+          ))}
+        </svg>
+      )}
+      {level}
     </span>
   )
 }

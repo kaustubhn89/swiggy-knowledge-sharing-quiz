@@ -79,4 +79,6 @@ button { -webkit-tap-highlight-color: transparent; }
   .answer-btn { min-height: 66px; }
   .funnel-seg { font-size: 0.6rem; padding: 0 16px 0 21px; }
   .funnel-seg:first-child { padding-left: 14px; }
+  /* "Q3/6" already shows progress; dropping the dots keeps topic + level tags on one line */
+  .q-dots { display: none !important; }
 }

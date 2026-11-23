@@ -2,6 +2,8 @@
 //  Amazon DSP, from zero: Quiz — QUESTION BANK  (the only file to edit)
 // ═════════════════════════════════════════════════════════════════════════
 //  One object per question, asked in this order:
+//    level    – optional difficulty tag shown next to the topic:
+//               "Easy", "Medium" or "Hard" (leave it out to hide the tag)
 //    topic    – short tag shown in the question header, e.g. "Audiences"
 //    question – the question text
 //    options  – exactly 4 answers
@@ -17,9 +19,10 @@
 // ═════════════════════════════════════════════════════════════════════════
 
 export const dspQuestions = [
-  {"topic":"Foundations","question":"What does DSP stand for?","options":["Digital Sales Platform","Demand-Side Platform","Data Sharing Program","Display Search Product"],"correct":1,"time":20},
-  {"topic":"Campaign structure","question":"What are the three levels of a DSP campaign, top to bottom?","options":["Campaign > Keyword > Ad","Order > Line item > Creative","Portfolio > Ad group > Target","Account > Order > Placement"],"correct":1,"time":20},
-  {"topic":"Goals","question":"Which goal is judged on detail page views and cost per DPV?","options":["Awareness","Consideration","Conversion","Retention"],"correct":1,"time":20},
-  {"topic":"Audiences","question":"In-market or lifestyle: which suits awareness better?","options":["In-market: smaller and more recent","Lifestyle: larger, stable and cheaper","Both are identical","Neither can be used for awareness"],"correct":1,"time":20},
-  {"topic":"Reporting","question":"A shopper sees the ad and buys a different product of the same brand on day 9. How is it credited?","options":["Promoted","Halo","Not credited","New-to-brand only"],"correct":1,"time":20}
+  {"level":"Easy","topic":"Foundations","question":"How do you pay for Amazon DSP ads?","options":["Per click","Per order","Per 1,000 impressions","A fixed monthly fee"],"correct":2,"time":20},
+  {"level":"Easy","topic":"Custom audiences","question":"Which of these is NOT one of the four groups of DSP custom audiences?","options":["Retail","Media","Campaign remarketing","In-market"],"correct":3,"time":20},
+  {"level":"Medium","topic":"Goals","question":"On an awareness campaign, who do we exclude to reach new-to-brand shoppers?","options":["People who viewed the product yesterday","Anyone who bought the brand in the last 365 days","People outside the category","Nobody; awareness needs no exclusions"],"correct":1,"time":25},
+  {"level":"Medium","topic":"Targeting","question":"What is the biggest difference between Sponsored Ads and DSP targeting?","options":["Sponsored Ads targets searches; DSP targets people by behaviour","DSP only runs on Amazon","Sponsored Ads is only for video","DSP needs keywords"],"correct":0,"time":25},
+  {"level":"Hard","topic":"Promoted products","question":"A line item shows Promoted ROAS 1.2 and Total ROAS 3.0. What does that tell you?","options":["The report is double counting","The advertised products sold three times more","Most credited sales are other products of the brand, not the advertised ones","New-to-brand sales are zero"],"correct":2,"time":30},
+  {"level":"Hard","topic":"Goals","question":"A new product is launching and nobody knows it yet. Which set-up makes most sense first?","options":["Only remarketing to cart-adders","Lifestyle and in-market audiences on an awareness goal, judged on reach","Only past-buyer audiences","Performance+ conversion only, judged on ROAS"],"correct":1,"time":30}
 ]

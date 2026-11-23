@@ -3,7 +3,7 @@
 // a colour; they read it from here.
 
 export const APP_NAME     = 'Amazon DSP, from zero: Quiz'
-export const APP_SUBTITLE = 'Session 1 knowledge check'
+export const APP_SUBTITLE = 'Knowledge check: slides 1 to 28'
 export const FOOTER       = 'Growisto Amazon Ads team'
 export const ORG          = 'Growisto'
 export const LOGO_ICON    = '/growisto-icon-white.png'
@@ -62,7 +62,15 @@ export const SLOTS = [
   { color: '#3B82F6', shape: 'square',   name: 'blue square' },
 ]
 
-export const AVATAR_COLORS = ['#FF9900', '#00A8A8', '#8E6CEF', '#3B82F6', '#2ECC71', '#E67E22', '#E74C3C', '#1ABC9C']
+// Difficulty tag next to the topic (keyed by lower-case `level`). Text colours
+// are ≥4.7:1 on their own tinted pill over both navy and panels; bars = 1–3.
+export const LEVELS = {
+  easy:   { color: '#4ADE80', bars: 1 },
+  medium: { color: '#F5C542', bars: 2 },
+  hard:   { color: '#FFA197', bars: 3 },
+}
+
+export const AVATAR_COLORS =['#FF9900', '#00A8A8', '#8E6CEF', '#3B82F6', '#2ECC71', '#E67E22', '#E74C3C', '#1ABC9C']
 
 // tint('#FF9900', 0.15) → 'rgba(255,153,0,0.15)'
 export function tint(hex, a) {

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { questions, optionOrder } from '../questions'
 import { T, SLOTS, tint } from '../brand'
-import { Shape, TopicTag } from './ui'
+import { Shape, TopicTag, LevelTag } from './ui'
 
 function CircularTimer({ totalTime, questionStartTime }) {
   const R = 58, CIRC = 2 * Math.PI * R
@@ -132,8 +132,9 @@ export default function QuestionScreen({ gameState, playerId, onAnswer, onTimeou
             Q{cur + 1}/{questions.length}
           </div>
           <TopicTag topic={q.topic} />
+          <LevelTag level={q.level} />
         </div>
-        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} aria-hidden="true">
+        <div className="q-dots" style={{ display: 'flex', gap: 4, flexShrink: 0 }} aria-hidden="true">
           {questions.map((_, i) => (
             <div key={i} style={{
               width: 7, height: 7, borderRadius: '50%',

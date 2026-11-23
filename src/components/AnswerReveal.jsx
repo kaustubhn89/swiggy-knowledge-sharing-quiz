@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { questions, optionOrder } from '../questions'
 import { T, SLOTS, tint } from '../brand'
-import { Shape, TopicTag } from './ui'
+import { Shape, TopicTag, LevelTag } from './ui'
 
 export default function AnswerReveal({ data, playerId }) {
   const { questionIdx, answer, score, isCorrect } = data
@@ -45,7 +45,10 @@ export default function AnswerReveal({ data, playerId }) {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 22, maxWidth: 460, textAlign: 'center' }}
       >
-        <TopicTag topic={q.topic} small />
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <TopicTag topic={q.topic} small />
+          <LevelTag level={q.level} small />
+        </div>
         <p style={{ color: T.text2, fontSize: '0.92rem' }}>Q{questionIdx + 1}: {q.text}</p>
       </motion.div>
 

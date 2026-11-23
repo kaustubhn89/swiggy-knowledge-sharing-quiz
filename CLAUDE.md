@@ -6,10 +6,10 @@ Kahoot-style live quiz for the Amazon DSP knowledge-sharing sessions. This is th
 unchanged from `main`; only questions, look and feel, and a few fixes differ.
 
 ## Where things live
-- **Questions (the only file to edit):** `src/data/dspQuestions.js` — `{ topic, question, options[4], correct (0-based), time }`
+- **Questions (the only file to edit):** `src/data/dspQuestions.js` — `{ level?, topic, question, options[4], correct (0-based), time }` — `level` (Easy/Medium/Hard) is optional and drives the difficulty tag
 - **Theme + copy:** `src/brand.js` (navy/orange palette, title, subtitle, footer, answer slot colours + shapes)
 - **Firebase namespace:** `src/db.js` → every path is `dsp/...` (`dsp/activeSessionId`, `dsp/sessions/{id}`)
-- **Shared UI bits:** `src/components/ui.jsx` (Shape icons, Growisto logo, DSP funnel strip, topic tag, footer)
+- **Shared UI bits:** `src/components/ui.jsx` (Shape icons, Growisto logo, DSP funnel strip, topic tag, level tag, footer)
 - **Logo:** `public/growisto-icon-white.png` (+ `public/favicon.png`)
 
 ## Do not touch

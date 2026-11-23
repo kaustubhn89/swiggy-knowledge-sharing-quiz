@@ -14,6 +14,7 @@ export function validateQuestions(list) {
     if (!q || typeof q !== 'object') { errors.push(`${n}: is not an object`); return }
     if (typeof q.question !== 'string' || !q.question.trim()) errors.push(`${n}: "question" text is missing`)
     if (q.topic != null && typeof q.topic !== 'string') errors.push(`${n}: "topic" must be text`)
+    if (q.level != null && (typeof q.level !== 'string' || !q.level.trim())) errors.push(`${n}: "level" must be text, e.g. "Easy", "Medium" or "Hard"`)
     if (!Array.isArray(q.options) || q.options.length !== 4) errors.push(`${n}: needs exactly 4 "options"`)
     else if (q.options.some(o => typeof o !== 'string' || !o.trim())) errors.push(`${n}: every option must be non-empty text`)
     else if (new Set(q.options.map(o => o.trim().toLowerCase())).size !== 4) errors.push(`${n}: two options are identical`)
@@ -29,6 +30,7 @@ if (problems.length) console.error('[questions] Fix src/data/dspQuestions.js:\n-
 export const questions = dspQuestions.map((q, i) => ({
   id:      i + 1,
   topic:   (q.topic || '').trim(),
+  level:   (q.level || '').trim(),
   text:    q.question,
   options: { A: q.options[0], B: q.options[1], C: q.options[2], D: q.options[3] },
   correct: LETTERS[q.correct],
